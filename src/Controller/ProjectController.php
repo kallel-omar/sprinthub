@@ -46,4 +46,11 @@ final class ProjectController extends AbstractController
             'workspace' => $workspace,
         ]);
     }
+    #[Route('/{id}', name: 'app_project_show')]
+public function show(Project $project): Response
+{
+    return $this->render('project/show.html.twig', [
+        'project' => $project,
+    ]);
+}
 }

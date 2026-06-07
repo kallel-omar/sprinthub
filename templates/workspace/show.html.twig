@@ -1,0 +1,45 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ workspace.name }}{% endblock %}
+
+{% block body %}
+<div class="container mt-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>{{ workspace.name }}</h1>
+            <p class="text-muted">{{ workspace.slug }}</p>
+        </div>
+
+        <a href="{{ path('app_project_new', {'id': workspace.id}) }}" class="btn btn-primary">
+            Create Project
+        </a>
+    </div>
+
+    <h3>Projects</h3>
+
+    {% if workspace.projects is empty %}
+        <div class="alert alert-info mt-3">
+            No projects yet in this workspace.
+        </div>
+    {% else %}
+        <div class="row mt-3">
+            {% for project in workspace.projects %}
+                <div class="col-md-4">
+                    <div class="card mb-3 shadow-sm">
+                        <div class="card-body">
+                            <h5>{{ project.name }}</h5>
+                            <p class="text-muted">{{ project.description|default('No description') }}</p>
+                        </div>
+                        <a href="{{ path('app_project_show', {'id': project.id}) }}"
+   class="btn btn-outline-primary btn-sm">
+    Open Project
+</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

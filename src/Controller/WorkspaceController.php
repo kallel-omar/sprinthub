@@ -58,4 +58,11 @@ final class WorkspaceController extends AbstractController
         $text = preg_replace('/[^a-z0-9]+/', '-', $text);
         return trim($text, '-');
     }
+    #[Route('/{id}', name: 'app_workspace_show')]
+public function show(Workspace $workspace): Response
+{
+    return $this->render('workspace/show.html.twig', [
+        'workspace' => $workspace,
+    ]);
+}
 }
