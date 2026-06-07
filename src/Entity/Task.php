@@ -38,6 +38,9 @@ class Task
 
     #[ORM\Column(type: Types::DATE_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $dueDate = null;
+
+    #[ORM\ManyToOne(inversedBy: 'assignedTasks')]
+    private ?User $assignee = null;
     
     public function __construct()
     {
@@ -142,6 +145,18 @@ class Task
     public function setDueDate(?\DateTimeImmutable $dueDate): static
     {
         $this->dueDate = $dueDate;
+
+        return $this;
+    }
+
+    public function getAssignee(): ?User
+    {
+        return $this->assignee;
+    }
+
+    public function setAssignee(?User $assignee): static
+    {
+        $this->assignee = $assignee;
 
         return $this;
     }

@@ -3,6 +3,8 @@
 namespace App\Form;
 
 use App\Entity\Task;
+use App\Entity\User;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -23,6 +25,11 @@ class TaskType extends AbstractType
                 ],
             ])
             ->add('dueDate')
+            ->add('assignee', EntityType::class, [
+                        'class' => User::class,
+                        'choice_label' => 'fullName',
+                        'required' => false,
+            ])
         ;
     }
 

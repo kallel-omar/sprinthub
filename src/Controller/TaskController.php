@@ -66,4 +66,43 @@ public function done(Task $task, EntityManagerInterface $entityManager): Respons
         'id' => $task->getProject()->getId(),
     ]);
 }
+#[Route('/{id}/edit', name: 'app_task_edit')]
+public function edit(
+    Task $task,
+    Request $request,
+    EntityManagerInterface $entityManager
+): Response {
+
+    $form = $this->createForm(TaskType::class, $task);
+
+    $form->handleRequest($request);
+
+    if ($form->isSubmitted() && $form->isValid()) {
+
+        $task->setUpdatedAt(new \DateTimeImmutable());
+
+        $entityManager->flush();
+
+        return $this->redirectToRoute('app_project_show', [
+            'id' => $task->getProject()->getId(),
+        ]);
+    }
+
+    return $this->render('task/edit.html.twig', [
+        'form' => $form,
+        'task' => $task,
+    ]);
+}
+#[Route('/{id}/delete', name: 'app_task_delete')]
+public function delete(Task $task, EntityManagerInterface $entityManager): Response
+{
+    $projectId = $task->getProject()->getId();
+
+    $entityManager->remove($task);
+    $entityManager->flush();
+
+    return $this->redirectToRoute('app_project_show', [
+        'id' => $projectId,
+    ]);
+}
 }
