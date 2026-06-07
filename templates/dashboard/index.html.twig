@@ -1,0 +1,46 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block body %}
+<div class="container mt-5">
+
+    <h1 class="mb-4">🚀 SprintHub Dashboard</h1>
+
+    <p class="text-muted">
+        Welcome back, <strong>{{ app.user.fullName }}</strong>
+    </p>
+
+    <div class="row mt-4">
+
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h5>Workspaces</h5>
+                    <h2>1</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h5>Projects</h5>
+                    <h2>0</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h5>Tasks</h5>
+                    <h2>0</h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

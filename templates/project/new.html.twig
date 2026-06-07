@@ -1,0 +1,27 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Create Project{% endblock %}
+
+{% block body %}
+<div class="container mt-5">
+
+    <h1>Create Project</h1>
+
+    <p class="text-muted">
+        Workspace: {{ workspace.name }}
+    </p>
+
+    {{ form_start(form) }}
+
+        {{ form_row(form.name) }}
+
+        {{ form_row(form.description) }}
+
+        <button class="btn btn-primary">
+            Create Project
+        </button>
+
+    {{ form_end(form) }}
+
+</div>
+{% endblock %}
