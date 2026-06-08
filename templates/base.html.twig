@@ -13,28 +13,43 @@
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container">
+
         <a class="navbar-brand fw-bold" href="{{ path('app_dashboard') }}">
             SprintHub
         </a>
 
         <div class="navbar-nav ms-auto">
+
             {% if app.user %}
-                <a class="nav-link" href="{{ path('app_dashboard') }}">Dashboard</a>                                                                                          
-                <a class="nav-link" href="{{ path('app_workspace_index') }}">Workspaces</a>
+
+                <a class="nav-link" href="{{ path('app_dashboard') }}">
+                    Dashboard
+                </a>
+
+                <a class="nav-link" href="{{ path('app_calendar') }}">
+                    Calendar
+                </a>
+
+                <a class="nav-link" href="{{ path('app_workspace_index') }}">
+                    Workspaces
+                </a>
+
                 <a class="nav-link d-flex align-items-center gap-2"
-                            href="{{ path('app_profile') }}">
+                   href="{{ path('app_profile') }}">
 
-                                {% if app.user.avatar %}
-                                    <img src="{{ asset('uploads/avatars/' ~ app.user.avatar) }}"
-                                        class="rounded-circle"
-                                        style="width:32px;height:32px;object-fit:cover;">
-                                {% endif %}
+                    {% if app.user.avatar %}
+                        <img src="{{ asset('uploads/avatars/' ~ app.user.avatar) }}"
+                             class="rounded-circle"
+                             style="width:32px;height:32px;object-fit:cover;">
+                    {% endif %}
 
-                                Profile
-                            </a>
+                    Profile
+                </a>
 
-                <a class="nav-link position-relative" href="{{ path('app_notification_index') }}">
+                <a class="nav-link position-relative"
+                   href="{{ path('app_notification_index') }}">
                     🔔
+
                     {% set unreadNotifications = render(path('app_notification_count')) %}
 
                     {% if unreadNotifications|trim > 0 %}
@@ -44,11 +59,22 @@
                     {% endif %}
                 </a>
 
-                <a class="nav-link" href="{{ path('app_logout') }}">Logout</a>
+                <a class="nav-link" href="{{ path('app_logout') }}">
+                    Logout
+                </a>
+
             {% else %}
-                <a class="nav-link" href="{{ path('app_login') }}">Login</a>
-                <a class="nav-link" href="{{ path('app_register') }}">Register</a>
+
+                <a class="nav-link" href="{{ path('app_login') }}">
+                    Login
+                </a>
+
+                <a class="nav-link" href="{{ path('app_register') }}">
+                    Register
+                </a>
+
             {% endif %}
+
         </div>
     </div>
 </nav>

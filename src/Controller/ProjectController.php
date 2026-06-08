@@ -48,8 +48,61 @@ final class ProjectController extends AbstractController
         ]);
     }
    
+#[Route('/{id}/stats', name: 'app_project_stats')]
+public function stats(Project $project): Response
+{
+    $totalTasks = count($project->getTasks());
 
-   #[Route('/{id}', name: 'app_project_show')]
+    $todoTasks = 0;
+    $inProgressTasks = 0;
+    $doneTasks = 0;
+
+    $highPriority = 0;
+    $mediumPriority = 0;
+    $lowPriority = 0;
+
+    foreach ($project->getTasks() as $task) {
+        if ($task->getStatus() === 'todo') {
+            $todoTasks++;
+        }
+
+        if ($task->getStatus() === 'in_progress') {
+            $inProgressTasks++;
+        }
+
+        if ($task->getStatus() === 'done') {
+            $doneTasks++;
+        }
+
+        if ($task->getPriority() === 'High') {
+            $highPriority++;
+        }
+
+        if ($task->getPriority() === 'Medium') {
+            $mediumPriority++;
+        }
+
+        if ($task->getPriority() === 'Low') {
+            $lowPriority++;
+        }
+    }
+
+    $completionRate = $totalTasks > 0
+        ? round(($doneTasks / $totalTasks) * 100, 1)
+        : 0;
+
+    return $this->render('project/stats.html.twig', [
+        'project' => $project,
+        'totalTasks' => $totalTasks,
+        'todoTasks' => $todoTasks,
+        'inProgressTasks' => $inProgressTasks,
+        'doneTasks' => $doneTasks,
+        'highPriority' => $highPriority,
+        'mediumPriority' => $mediumPriority,
+        'lowPriority' => $lowPriority,
+        'completionRate' => $completionRate,
+    ]);
+}
 #[Route('/{id}', name: 'app_project_show')]
 public function show(
     Project $project,

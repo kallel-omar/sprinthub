@@ -1,0 +1,101 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Project Statistics{% endblock %}
+
+{% block body %}
+<div class="container mt-5">
+
+    <a href="{{ path('app_project_show', {'id': project.id}) }}"
+       class="btn btn-outline-secondary btn-sm mb-3">
+        ← Back to Project
+    </a>
+
+    <h1 class="mb-4">📊 {{ project.name }} Statistics</h1>
+
+    <div class="row">
+
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <h6>Total Tasks</h6>
+                    <h2>{{ totalTasks }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card border-secondary text-center">
+                <div class="card-body">
+                    <h6>Todo</h6>
+                    <h2>{{ todoTasks }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card border-warning text-center">
+                <div class="card-body">
+                    <h6>In Progress</h6>
+                    <h2>{{ inProgressTasks }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card border-success text-center">
+                <div class="card-body">
+                    <h6>Done</h6>
+                    <h2>{{ doneTasks }}</h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <h5>Completion Rate</h5>
+
+            <div class="progress mt-3" style="height: 30px;">
+                <div class="progress-bar bg-success"
+                     role="progressbar"
+                     style="width: {{ completionRate }}%;">
+                    {{ completionRate }}%
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+
+        <div class="col-md-4 mb-3">
+            <div class="card border-warning text-center">
+                <div class="card-body">
+                    <h6>High Priority</h6>
+                    <h2>{{ highPriority }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card border-info text-center">
+                <div class="card-body">
+                    <h6>Medium Priority</h6>
+                    <h2>{{ mediumPriority }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card border-secondary text-center">
+                <div class="card-body">
+                    <h6>Low Priority</h6>
+                    <h2>{{ lowPriority }}</h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
