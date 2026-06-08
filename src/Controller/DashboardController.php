@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Repository\ActivityLogRepository;
+use App\Repository\NotificationRepository;
 use App\Repository\ProjectRepository;
 use App\Repository\TaskRepository;
 use App\Repository\WorkspaceRepository;
@@ -17,34 +18,62 @@ final class DashboardController extends AbstractController
         WorkspaceRepository $workspaceRepository,
         ProjectRepository $projectRepository,
         TaskRepository $taskRepository,
-        ActivityLogRepository $activityLogRepository
+        ActivityLogRepository $activityLogRepository,
+        NotificationRepository $notificationRepository
     ): Response {
-        $totalWorkspaces = $workspaceRepository->count([]);
-        $totalProjects = $projectRepository->count([]);
-        $totalTasks = $taskRepository->count([]);
+        /** @var \App\Entity\User $user */
+        $user = $this->getUser();
 
-        $todoTasks = $taskRepository->count(['status' => 'todo']);
-        $inProgressTasks = $taskRepository->count(['status' => 'in_progress']);
-        $doneTasks = $taskRepository->count(['status' => 'done']);
+        $myTasks = $taskRepository->findBy(
+            ['assignee' => $user],
+            ['createdAt' => 'DESC'],
+            5
+        );
 
-        $completionRate = $totalTasks > 0
-            ? round(($doneTasks / $totalTasks) * 100, 1)
+        $myTodoTasks = $taskRepository->count([
+            'assignee' => $user,
+            'status' => 'todo',
+        ]);
+
+        $myInProgressTasks = $taskRepository->count([
+            'assignee' => $user,
+            'status' => 'in_progress',
+        ]);
+
+        $myDoneTasks = $taskRepository->count([
+            'assignee' => $user,
+            'status' => 'done',
+        ]);
+
+        $myTotalTasks = $myTodoTasks + $myInProgressTasks + $myDoneTasks;
+
+        $myCompletionRate = $myTotalTasks > 0
+            ? round(($myDoneTasks / $myTotalTasks) * 100, 1)
             : 0;
+
+        $unreadNotifications = $notificationRepository->count([
+            'user' => $user,
+            'isRead' => false,
+        ]);
 
         $recentActivities = $activityLogRepository->findBy(
             [],
             ['createdAt' => 'DESC'],
-            10
+            8
         );
 
         return $this->render('dashboard/index.html.twig', [
-            'totalWorkspaces' => $totalWorkspaces,
-            'totalProjects' => $totalProjects,
-            'totalTasks' => $totalTasks,
-            'todoTasks' => $todoTasks,
-            'inProgressTasks' => $inProgressTasks,
-            'doneTasks' => $doneTasks,
-            'completionRate' => $completionRate,
+            'totalWorkspaces' => $workspaceRepository->count([]),
+            'totalProjects' => $projectRepository->count([]),
+            'totalTasks' => $taskRepository->count([]),
+
+            'myTasks' => $myTasks,
+            'myTotalTasks' => $myTotalTasks,
+            'myTodoTasks' => $myTodoTasks,
+            'myInProgressTasks' => $myInProgressTasks,
+            'myDoneTasks' => $myDoneTasks,
+            'myCompletionRate' => $myCompletionRate,
+            'unreadNotifications' => $unreadNotifications,
             'recentActivities' => $recentActivities,
         ]);
     }
