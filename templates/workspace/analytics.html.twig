@@ -79,14 +79,54 @@
             <h5>Completion Rate</h5>
 
             <div class="progress mt-3" style="height: 30px;">
-                <div class="progress-bar"
+                <div class="progress-bar bg-success"
                      role="progressbar"
-                     style="width: {{ completionRate }}%">
+                     style="width: {{ completionRate }}%;">
                     {{ completionRate }}%
                 </div>
             </div>
         </div>
     </div>
 
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <h5>Workspace Task Status Chart</h5>
+
+            <div style="max-width: 420px; margin: auto;">
+                <canvas id="workspaceTaskStatusChart"></canvas>
+            </div>
+        </div>
+    </div>
+
 </div>
+{% endblock %}
+
+{% block javascripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const workspaceTaskStatusCtx = document.getElementById('workspaceTaskStatusChart');
+
+    new Chart(workspaceTaskStatusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Todo', 'In Progress', 'Done'],
+            datasets: [{
+                data: [
+                    {{ todoTasks }},
+                    {{ inProgressTasks }},
+                    {{ doneTasks }}
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+</script>
 {% endblock %}

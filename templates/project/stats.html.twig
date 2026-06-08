@@ -65,6 +65,15 @@
             </div>
         </div>
     </div>
+    <div class="card shadow-sm mt-4">
+    <div class="card-body">
+        <h5>Task Status Chart</h5>
+
+        <div style="max-width: 400px; margin: auto;">
+            <canvas id="taskStatusChart"></canvas>
+        </div>
+    </div>
+</div>
 
     <div class="row mt-4">
 
@@ -98,4 +107,25 @@
     </div>
 
 </div>
+{% endblock %}
+{% block javascripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const taskStatusCtx = document.getElementById('taskStatusChart');
+
+    new Chart(taskStatusCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Todo', 'In Progress', 'Done'],
+            datasets: [{
+                data: [
+                    {{ todoTasks }},
+                    {{ inProgressTasks }},
+                    {{ doneTasks }}
+                ]
+            }]
+        }
+    });
+</script>
 {% endblock %}

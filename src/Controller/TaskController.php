@@ -3,25 +3,24 @@
 namespace App\Controller;
 
 use App\Entity\ActivityLog;
+use App\Entity\Notification;
 use App\Entity\Project;
 use App\Entity\Task;
 use App\Entity\TaskAttachment;
+use App\Entity\TaskChecklistItem;
 use App\Entity\TaskComment;
 use App\Form\TaskAttachmentType;
+use App\Form\TaskChecklistItemType;
 use App\Form\TaskCommentType;
 use App\Form\TaskType;
-use App\Entity\Notification;
-use App\Entity\TaskChecklistItem;
-use App\Form\TaskChecklistItemType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
-
 
 #[Route('/tasks')]
 final class TaskController extends AbstractController
@@ -42,21 +41,22 @@ final class TaskController extends AbstractController
             $this->createActivityLog(
                 $entityManager,
                 'task_created',
-                $this->getUser()->getFullName() . ' created task "' . $task->getTitle() . '"',
+                $this->getUserDisplayName() . ' created task "' . $task->getTitle() . '"',
                 $task
             );
-        if ($task->getAssignee()) {
-            $notification = new Notification();
-            $notification->setUser($task->getAssignee());
-            $notification->setMessage(
-                $this->getUser()->getFullName()
-                . ' assigned you to task "'
-                . $task->getTitle()
-                . '"'
-            );
 
-    $entityManager->persist($notification);
-}
+            if ($task->getAssignee()) {
+                $notification = new Notification();
+                $notification->setUser($task->getAssignee());
+                $notification->setMessage(
+                    $this->getUserDisplayName()
+                    . ' assigned you to task "'
+                    . $task->getTitle()
+                    . '"'
+                );
+
+                $entityManager->persist($notification);
+            }
 
             $entityManager->flush();
 
@@ -79,7 +79,7 @@ final class TaskController extends AbstractController
         $this->createActivityLog(
             $entityManager,
             'task_started',
-            $this->getUser()->getFullName() . ' started task "' . $task->getTitle() . '"',
+            $this->getUserDisplayName() . ' started task "' . $task->getTitle() . '"',
             $task
         );
 
@@ -98,7 +98,7 @@ final class TaskController extends AbstractController
         $this->createActivityLog(
             $entityManager,
             'task_completed',
-            $this->getUser()->getFullName() . ' completed task "' . $task->getTitle() . '"',
+            $this->getUserDisplayName() . ' completed task "' . $task->getTitle() . '"',
             $task
         );
 
@@ -121,7 +121,7 @@ final class TaskController extends AbstractController
             $this->createActivityLog(
                 $entityManager,
                 'task_updated',
-                $this->getUser()->getFullName() . ' updated task "' . $task->getTitle() . '"',
+                $this->getUserDisplayName() . ' updated task "' . $task->getTitle() . '"',
                 $task
             );
 
@@ -146,7 +146,7 @@ final class TaskController extends AbstractController
         $this->createActivityLog(
             $entityManager,
             'task_deleted',
-            $this->getUser()->getFullName() . ' deleted task "' . $task->getTitle() . '"',
+            $this->getUserDisplayName() . ' deleted task "' . $task->getTitle() . '"',
             $task
         );
 
@@ -177,8 +177,8 @@ final class TaskController extends AbstractController
 
             $this->createActivityLog(
                 $entityManager,
-                'comment',
-                $this->getUser()->getFullName() . ' commented on task "' . $task->getTitle() . '"',
+                'comment_added',
+                $this->getUserDisplayName() . ' commented on task "' . $task->getTitle() . '"',
                 $task
             );
 
@@ -192,27 +192,34 @@ final class TaskController extends AbstractController
         $attachment = new TaskAttachment();
         $attachmentForm = $this->createForm(TaskAttachmentType::class, $attachment);
         $attachmentForm->handleRequest($request);
+
         $checklistItem = new TaskChecklistItem();
+        $checklistForm = $this->createForm(TaskChecklistItemType::class, $checklistItem);
+        $checklistForm->handleRequest($request);
 
-$checklistForm = $this->createForm(
-    TaskChecklistItemType::class,
-    $checklistItem
-);
+        if ($checklistForm->isSubmitted() && $checklistForm->isValid()) {
+            $checklistItem->setTask($task);
 
-$checklistForm->handleRequest($request);
+            $entityManager->persist($checklistItem);
 
-if ($checklistForm->isSubmitted() && $checklistForm->isValid()) {
+            $this->createActivityLog(
+                $entityManager,
+                'checklist_added',
+                $this->getUserDisplayName()
+                . ' added checklist item "'
+                . $checklistItem->getContent()
+                . '" to task "'
+                . $task->getTitle()
+                . '"',
+                $task
+            );
 
-    $checklistItem->setTask($task);
+            $entityManager->flush();
 
-    $entityManager->persist($checklistItem);
-
-    $entityManager->flush();
-
-    return $this->redirectToRoute('app_task_show', [
-        'id' => $task->getId(),
-    ]);
-}
+            return $this->redirectToRoute('app_task_show', [
+                'id' => $task->getId(),
+            ]);
+        }
 
         if ($attachmentForm->isSubmitted() && $attachmentForm->isValid()) {
             $uploadedFile = $attachmentForm->get('file')->getData();
@@ -249,8 +256,13 @@ if ($checklistForm->isSubmitted() && $checklistForm->isValid()) {
 
                 $this->createActivityLog(
                     $entityManager,
-                    'file_uploaded',
-                    $this->getUser()->getFullName() . ' uploaded file "' . $originalName . '" to task "' . $task->getTitle() . '"',
+                    'attachment_uploaded',
+                    $this->getUserDisplayName()
+                    . ' uploaded file "'
+                    . $originalName
+                    . '" to task "'
+                    . $task->getTitle()
+                    . '"',
                     $task
                 );
 
@@ -289,11 +301,104 @@ if ($checklistForm->isSubmitted() && $checklistForm->isValid()) {
         $this->createActivityLog(
             $entityManager,
             'file_deleted',
-            $this->getUser()->getFullName() . ' deleted file "' . $originalName . '" from task "' . $task->getTitle() . '"',
+            $this->getUserDisplayName()
+            . ' deleted file "'
+            . $originalName
+            . '" from task "'
+            . $task->getTitle()
+            . '"',
             $task
         );
 
         $entityManager->remove($attachment);
+        $entityManager->flush();
+
+        return $this->redirectToRoute('app_task_show', [
+            'id' => $taskId,
+        ]);
+    }
+
+    #[Route('/{id}/status', name: 'app_task_update_status', methods: ['POST'])]
+    public function updateStatus(
+        Task $task,
+        Request $request,
+        EntityManagerInterface $entityManager
+    ): JsonResponse {
+        $data = json_decode($request->getContent(), true);
+
+        if (!isset($data['status'])) {
+            return new JsonResponse(['success' => false, 'error' => 'Missing status'], 400);
+        }
+
+        if (!in_array($data['status'], ['todo', 'in_progress', 'done'])) {
+            return new JsonResponse(['success' => false, 'error' => 'Invalid status'], 400);
+        }
+
+        $task->setStatus($data['status']);
+
+        $this->createActivityLog(
+            $entityManager,
+            'task_status_changed',
+            $this->getUserDisplayName()
+            . ' moved task "'
+            . $task->getTitle()
+            . '" to '
+            . $data['status'],
+            $task
+        );
+
+        $entityManager->flush();
+
+        return new JsonResponse([
+            'success' => true,
+            'status' => $task->getStatus(),
+        ]);
+    }
+
+    #[Route('/checklist/{id}/toggle', name: 'app_checklist_toggle')]
+    public function toggleChecklist(
+        TaskChecklistItem $item,
+        EntityManagerInterface $entityManager
+    ): Response {
+        $item->setIsDone(!$item->isDone());
+
+        $this->createActivityLog(
+            $entityManager,
+            'checklist_toggled',
+            $this->getUserDisplayName()
+            . ' updated checklist item "'
+            . $item->getContent()
+            . '"',
+            $item->getTask()
+        );
+
+        $entityManager->flush();
+
+        return $this->redirectToRoute('app_task_show', [
+            'id' => $item->getTask()->getId(),
+        ]);
+    }
+
+    #[Route('/checklist/{id}/delete', name: 'app_checklist_delete')]
+    public function deleteChecklist(
+        TaskChecklistItem $item,
+        EntityManagerInterface $entityManager
+    ): Response {
+        $task = $item->getTask();
+        $taskId = $task->getId();
+        $content = $item->getContent();
+
+        $this->createActivityLog(
+            $entityManager,
+            'checklist_deleted',
+            $this->getUserDisplayName()
+            . ' deleted checklist item "'
+            . $content
+            . '"',
+            $task
+        );
+
+        $entityManager->remove($item);
         $entityManager->flush();
 
         return $this->redirectToRoute('app_task_show', [
@@ -318,70 +423,9 @@ if ($checklistForm->isSubmitted() && $checklistForm->isValid()) {
 
         $entityManager->persist($log);
     }
-    #[Route('/{id}/status', name: 'app_task_update_status', methods: ['POST'])]
-    public function updateStatus(
-        Task $task,
-        Request $request,
-        EntityManagerInterface $entityManager
-    ): JsonResponse {
-        $data = json_decode($request->getContent(), true);
 
-        if (!isset($data['status'])) {
-            return new JsonResponse(['success' => false, 'error' => 'Missing status'], 400);
-        }
-
-        if (!in_array($data['status'], ['todo', 'in_progress', 'done'])) {
-            return new JsonResponse(['success' => false, 'error' => 'Invalid status'], 400);
-        }
-
-    $task->setStatus($data['status']);
-
-    $this->createActivityLog(
-        $entityManager,
-        'task_status_changed',
-        $this->getUser()->getFullName()
-        . ' moved task "'
-        . $task->getTitle()
-        . '" to '
-        . $data['status'],
-        $task
-    );
-
-    $entityManager->flush();
-
-    return new JsonResponse([
-        'success' => true,
-        'status' => $task->getStatus(),
-    ]);
-}
-#[Route('/checklist/{id}/toggle', name: 'app_checklist_toggle')]
-public function toggleChecklist(
-    TaskChecklistItem $item,
-    EntityManagerInterface $entityManager
-): Response {
-
-    $item->setIsDone(!$item->isDone());
-
-    $entityManager->flush();
-
-    return $this->redirectToRoute('app_task_show', [
-        'id' => $item->getTask()->getId(),
-    ]);
-}
-
-#[Route('/checklist/{id}/delete', name: 'app_checklist_delete')]
-public function deleteChecklist(
-    TaskChecklistItem $item,
-    EntityManagerInterface $entityManager
-): Response {
-
-    $taskId = $item->getTask()->getId();
-
-    $entityManager->remove($item);
-    $entityManager->flush();
-
-    return $this->redirectToRoute('app_task_show', [
-        'id' => $taskId,
-    ]);
-}
+    private function getUserDisplayName(): string
+    {
+        return ucfirst($this->getUser()->getFullName());
+    }
 }

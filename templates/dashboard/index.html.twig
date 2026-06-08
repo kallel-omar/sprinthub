@@ -220,21 +220,60 @@
         <div class="col-md-6 mb-3">
             <div class="card shadow-sm h-100">
                 <div class="card-body">
-                    <h5>📜 Recent Activity</h5>
+                    <h5 class="mb-3">📜 Recent Activity Timeline</h5>
 
-                    {% for activity in recentActivities %}
-                        <div class="border-bottom py-2">
-                            <span>{{ activity.message }}</span>
+{% for activity in recentActivities %}
+    <div class="d-flex gap-3 border-bottom py-3">
 
-                            <small class="text-muted d-block">
-                                {{ activity.createdAt|date('d/m/Y H:i') }}
-                            </small>
-                        </div>
-                    {% else %}
-                        <p class="text-muted mt-3">
-                            No activity yet.
-                        </p>
-                    {% endfor %}
+        <div>
+            {% if activity.type == 'task_created' %}
+                🟢
+            {% elseif activity.type == 'task_updated' %}
+                📝
+            {% elseif activity.type == 'task_completed' %}
+                ✅
+            {% elseif activity.type == 'task_started' %}
+                🚧
+            {% elseif activity.type == 'task_deleted' %}
+                🗑️
+           {% elseif activity.type == 'comment_added' or activity.type == 'comment' %}
+                💬
+
+            {% elseif activity.type == 'attachment_uploaded' or activity.type == 'file_uploaded' %}
+                📎
+
+            {% elseif activity.type == 'file_deleted' %}
+                ❌
+
+            {% elseif activity.type == 'checklist_added' %}
+                ☑️
+
+            {% elseif activity.type == 'workspace_invitation' %}
+                📧
+
+            {% elseif activity.type == 'task_status_changed' %}
+                🔄
+            {% else %}
+                📌
+            {% endif %}
+        </div>
+
+        <div class="flex-grow-1">
+            <div>
+                {{ activity.message }}
+            </div>
+
+            <small class="text-muted">
+                {{ activity.createdAt|date('d/m/Y H:i') }}
+            </small>
+        </div>
+
+    </div>
+{% else %}
+    <p class="text-muted mt-3">
+        No activity yet.
+    </p>
+{% endfor %}
 
                 </div>
             </div>
