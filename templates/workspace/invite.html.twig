@@ -1,0 +1,71 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Invite Member{% endblock %}
+
+{% block body %}
+<div class="container mt-5">
+
+    <a href="{{ path('app_workspace_show', {'id': workspace.id}) }}"
+       class="btn btn-outline-secondary btn-sm mb-3">
+        ← Back to Workspace
+    </a>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+
+            <h1>📧 Invite Member</h1>
+
+            <p class="text-muted">
+                Workspace: {{ workspace.name }}
+            </p>
+
+            {{ form_start(form) }}
+
+                <div class="mb-3">
+                    {{ form_row(form.email) }}
+                </div>
+
+                <button class="btn btn-primary">
+                    Send Invitation
+                </button>
+
+            {{ form_end(form) }}
+
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <h4>Pending Invitations</h4>
+
+            {% for invitation in invitations %}
+                <div class="border-bottom py-3">
+
+                    <strong>{{ invitation.email }}</strong>
+
+                    <span class="badge bg-warning text-dark ms-2">
+                        {{ invitation.status }}
+                    </span>
+
+                    <p class="mt-2 mb-1">
+                Copy this link and send it to the invited user:
+            </p>
+
+            <code>
+                {{ absolute_url(path('app_invitation_accept', {'token': invitation.token})) }}
+            </code>
+
+
+                </div>
+            {% else %}
+                <p class="text-muted mt-3">
+                    No invitations yet.
+                </p>
+            {% endfor %}
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

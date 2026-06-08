@@ -44,6 +44,11 @@
                    class="btn btn-outline-success">
                     Analytics
                 </a>
+
+                <a href="{{ path('app_workspace_invite', {'id': workspace.id}) }}"
+                class="btn btn-outline-warning">
+                    Invite Member
+                </a>
             </div>
         {% endif %}
     </div>

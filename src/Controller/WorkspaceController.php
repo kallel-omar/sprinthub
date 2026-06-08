@@ -7,6 +7,8 @@ use App\Entity\WorkspaceMember;
 use App\Form\WorkspaceMemberType;
 use App\Form\WorkspaceType;
 use App\Repository\WorkspaceMemberRepository;
+use App\Entity\WorkspaceInvitation;
+use App\Form\WorkspaceInvitationType;
 use App\Repository\WorkspaceRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -111,6 +113,55 @@ final class WorkspaceController extends AbstractController
             'form' => $form,
         ]);
     }
+
+
+    #[Route('/{id}/invite', name: 'app_workspace_invite')]
+public function invite(
+    Workspace $workspace,
+    Request $request,
+    EntityManagerInterface $entityManager
+): Response {
+    $role = $this->getUserWorkspaceRole($workspace);
+
+    if (!in_array($role, ['owner', 'admin'])) {
+        throw $this->createAccessDeniedException(
+            'You are not allowed to invite members.'
+        );
+    }
+
+    $invitation = new WorkspaceInvitation();
+
+    $form = $this->createForm(WorkspaceInvitationType::class, $invitation);
+    $form->handleRequest($request);
+
+    if ($form->isSubmitted() && $form->isValid()) {
+        $invitation->setWorkspace($workspace);
+        $invitation->setToken(bin2hex(random_bytes(32)));
+        $invitation->setStatus('pending');
+        $invitation->setCreatedAt(new \DateTimeImmutable());
+        $invitation->setExpiresAt(
+            new \DateTimeImmutable('+7 days')
+        );
+
+        $entityManager->persist($invitation);
+        $entityManager->flush();
+
+        $this->addFlash(
+            'success',
+            'Invitation created successfully.'
+        );
+
+        return $this->redirectToRoute('app_workspace_invite', [
+            'id' => $workspace->getId(),
+        ]);
+    }
+
+    return $this->render('workspace/invite.html.twig', [
+        'workspace' => $workspace,
+        'form' => $form->createView(),
+         'invitations' => $workspace->getInvitations(),
+    ]);
+}
 
     #[Route('/{id}/members', name: 'app_workspace_members')]
     public function members(

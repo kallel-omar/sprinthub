@@ -58,6 +58,12 @@ private Collection $members;
      */
     #[ORM\OneToMany(targetEntity: ActivityLog::class, mappedBy: 'workspace')]
     private Collection $activityLogs;
+
+    /**
+     * @var Collection<int, WorkspaceInvitation>
+     */
+    #[ORM\OneToMany(targetEntity: WorkspaceInvitation::class, mappedBy: 'workspace', orphanRemoval: true)]
+    private Collection $invitations;
     
     public function __construct()
 {
@@ -65,6 +71,7 @@ private Collection $members;
     $this->projects = new ArrayCollection();
     $this->members = new ArrayCollection();
     $this->activityLogs = new ArrayCollection();
+    $this->invitations = new ArrayCollection();
 }
 
     public function getId(): ?int
@@ -216,6 +223,36 @@ private Collection $members;
             // set the owning side to null (unless already changed)
             if ($activityLog->getWorkspace() === $this) {
                 $activityLog->setWorkspace(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, WorkspaceInvitation>
+     */
+    public function getInvitations(): Collection
+    {
+        return $this->invitations;
+    }
+
+    public function addInvitation(WorkspaceInvitation $invitation): static
+    {
+        if (!$this->invitations->contains($invitation)) {
+            $this->invitations->add($invitation);
+            $invitation->setWorkspace($this);
+        }
+
+        return $this;
+    }
+
+    public function removeInvitation(WorkspaceInvitation $invitation): static
+    {
+        if ($this->invitations->removeElement($invitation)) {
+            // set the owning side to null (unless already changed)
+            if ($invitation->getWorkspace() === $this) {
+                $invitation->setWorkspace(null);
             }
         }
 
