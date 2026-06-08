@@ -9,6 +9,9 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use App\Entity\TaskComment;
+use App\Entity\TaskAttachment;
+use App\Entity\WorkspaceMember;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
@@ -46,11 +49,31 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     #[ORM\OneToMany(targetEntity: Task::class, mappedBy: 'assignee')]
     private Collection $assignedTasks;
+    /**
+ * @var Collection<int, TaskComment>
+ */
+#[ORM\OneToMany(targetEntity: TaskComment::class, mappedBy: 'user')]
+private Collection $comments;
+
+/**
+ * @var Collection<int, TaskAttachment>
+ */
+#[ORM\OneToMany(targetEntity: TaskAttachment::class, mappedBy: 'uploadedBy')]
+private Collection $attachments;
+
+/**
+ * @var Collection<int, WorkspaceMember>
+ */
+#[ORM\OneToMany(targetEntity: WorkspaceMember::class, mappedBy: 'user')]
+private Collection $workspaceMemberships;
 
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
         $this->assignedTasks = new ArrayCollection();
+         $this->comments = new ArrayCollection();
+         $this->attachments = new ArrayCollection();
+         $this->workspaceMemberships = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -185,4 +208,92 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         return $this;
     }
+    /**
+ * @return Collection<int, TaskComment>
+ */
+public function getComments(): Collection
+{
+    return $this->comments;
+}
+
+public function addComment(TaskComment $comment): static
+{
+    if (!$this->comments->contains($comment)) {
+        $this->comments->add($comment);
+        $comment->setUser($this);
+    }
+
+    return $this;
+}
+
+public function removeComment(TaskComment $comment): static
+{
+    if ($this->comments->removeElement($comment)) {
+        if ($comment->getUser() === $this) {
+            $comment->setUser(null);
+        }
+    }
+
+    return $this;
+}
+
+/**
+ * @return Collection<int, TaskAttachment>
+ */
+public function getAttachments(): Collection
+{
+    return $this->attachments;
+}
+
+public function addAttachment(TaskAttachment $attachment): static
+{
+    if (!$this->attachments->contains($attachment)) {
+        $this->attachments->add($attachment);
+        $attachment->setUploadedBy($this);
+    }
+
+    return $this;
+}
+
+public function removeAttachment(TaskAttachment $attachment): static
+{
+    if ($this->attachments->removeElement($attachment)) {
+        // set the owning side to null (unless already changed)
+        if ($attachment->getUploadedBy() === $this) {
+            $attachment->setUploadedBy(null);
+        }
+    }
+
+    return $this;
+}
+
+/**
+ * @return Collection<int, WorkspaceMember>
+ */
+public function getWorkspaceMemberships(): Collection
+{
+    return $this->workspaceMemberships;
+}
+
+public function addWorkspaceMembership(WorkspaceMember $workspaceMembership): static
+{
+    if (!$this->workspaceMemberships->contains($workspaceMembership)) {
+        $this->workspaceMemberships->add($workspaceMembership);
+        $workspaceMembership->setUser($this);
+    }
+
+    return $this;
+}
+
+public function removeWorkspaceMembership(WorkspaceMember $workspaceMembership): static
+{
+    if ($this->workspaceMemberships->removeElement($workspaceMembership)) {
+        // set the owning side to null (unless already changed)
+        if ($workspaceMembership->getUser() === $this) {
+            $workspaceMembership->setUser(null);
+        }
+    }
+
+    return $this;
+}
 }

@@ -44,7 +44,12 @@
                                 {% if task.status == 'todo' %}
                                     <div class="card mb-2">
                                         <div class="card-body">
-                                            <h6>{{ task.title }}</h6>
+                                           <h6>
+    <a href="{{ path('app_task_show', {'id': task.id}) }}"
+       class="text-decoration-none">
+        {{ task.title }}
+    </a>
+</h6>
 
                                             <p class="text-muted small">
                                                 {{ task.description|default('No description') }}
@@ -99,7 +104,12 @@
                                 {% if task.status == 'in_progress' %}
                                     <div class="card mb-2">
                                         <div class="card-body">
-                                            <h6>{{ task.title }}</h6>
+                                            <h6>
+    <a href="{{ path('app_task_show', {'id': task.id}) }}"
+       class="text-decoration-none">
+        {{ task.title }}
+    </a>
+</h6>
 
                                             <p class="text-muted small">
                                                 {{ task.description|default('No description') }}
@@ -154,8 +164,12 @@
                                 {% if task.status == 'done' %}
                                     <div class="card mb-2">
                                         <div class="card-body">
-                                            <h6>{{ task.title }}</h6>
-
+                                            <h6>
+    <a href="{{ path('app_task_show', {'id': task.id}) }}"
+       class="text-decoration-none">
+        {{ task.title }}
+    </a>
+</h6>
                                             <p class="text-muted small">
                                                 {{ task.description|default('No description') }}
                                             </p>

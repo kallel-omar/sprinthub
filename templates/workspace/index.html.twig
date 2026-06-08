@@ -31,6 +31,13 @@
    class="btn btn-outline-primary btn-sm">
     Open
 </a>
+
+    <a href="{{ path('app_workspace_delete', {'id': workspace.id}) }}"
+       class="btn btn-danger"
+       onclick="return confirm('Delete this workspace and all its data?')">
+        Delete Workspace
+    </a>
+
             </div>
         </div>
     </div>

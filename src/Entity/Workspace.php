@@ -34,13 +34,37 @@ class Workspace
     /**
      * @var Collection<int, Project>
      */
-    #[ORM\OneToMany(targetEntity: Project::class, mappedBy: 'workspace')]
-    private Collection $projects;
+    #[ORM\OneToMany(
+    targetEntity: Project::class,
+    mappedBy: 'workspace',
+    cascade: ['remove'],
+    orphanRemoval: true
+)]
+private Collection $projects;
+
+    /**
+     * @var Collection<int, WorkspaceMember>
+     */
+    #[ORM\OneToMany(
+    targetEntity: WorkspaceMember::class,
+    mappedBy: 'workspace',
+    cascade: ['remove'],
+    orphanRemoval: true
+)]
+private Collection $members;
+
+    /**
+     * @var Collection<int, ActivityLog>
+     */
+    #[ORM\OneToMany(targetEntity: ActivityLog::class, mappedBy: 'workspace')]
+    private Collection $activityLogs;
     
     public function __construct()
 {
     $this->createdAt = new \DateTimeImmutable();
     $this->projects = new ArrayCollection();
+    $this->members = new ArrayCollection();
+    $this->activityLogs = new ArrayCollection();
 }
 
     public function getId(): ?int
@@ -132,6 +156,66 @@ class Workspace
             // set the owning side to null (unless already changed)
             if ($project->getWorkspace() === $this) {
                 $project->setWorkspace(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, WorkspaceMember>
+     */
+    public function getMembers(): Collection
+    {
+        return $this->members;
+    }
+
+    public function addMember(WorkspaceMember $member): static
+    {
+        if (!$this->members->contains($member)) {
+            $this->members->add($member);
+            $member->setWorkspace($this);
+        }
+
+        return $this;
+    }
+
+    public function removeMember(WorkspaceMember $member): static
+    {
+        if ($this->members->removeElement($member)) {
+            // set the owning side to null (unless already changed)
+            if ($member->getWorkspace() === $this) {
+                $member->setWorkspace(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, ActivityLog>
+     */
+    public function getActivityLogs(): Collection
+    {
+        return $this->activityLogs;
+    }
+
+    public function addActivityLog(ActivityLog $activityLog): static
+    {
+        if (!$this->activityLogs->contains($activityLog)) {
+            $this->activityLogs->add($activityLog);
+            $activityLog->setWorkspace($this);
+        }
+
+        return $this;
+    }
+
+    public function removeActivityLog(ActivityLog $activityLog): static
+    {
+        if ($this->activityLogs->removeElement($activityLog)) {
+            // set the owning side to null (unless already changed)
+            if ($activityLog->getWorkspace() === $this) {
+                $activityLog->setWorkspace(null);
             }
         }
 

@@ -13,34 +13,112 @@
 
     <div class="row mt-4">
 
-        <div class="col-md-4">
+        <div class="col-md-4 mb-3">
             <div class="card shadow-sm">
                 <div class="card-body text-center">
                     <h5>Workspaces</h5>
-                    <h2>1</h2>
+                    <h2>{{ totalWorkspaces }}</h2>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-4 mb-3">
             <div class="card shadow-sm">
                 <div class="card-body text-center">
                     <h5>Projects</h5>
-                    <h2>0</h2>
+                    <h2>{{ totalProjects }}</h2>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-4 mb-3">
             <div class="card shadow-sm">
                 <div class="card-body text-center">
                     <h5>Tasks</h5>
-                    <h2>0</h2>
+                    <h2>{{ totalTasks }}</h2>
                 </div>
             </div>
         </div>
 
     </div>
+
+    <div class="row mt-3">
+
+        <div class="col-md-4 mb-3">
+            <div class="card border-secondary">
+                <div class="card-body text-center">
+                    <h5>Todo</h5>
+                    <h2>{{ todoTasks }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <h5>In Progress</h5>
+                    <h2>{{ inProgressTasks }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <h5>Completed</h5>
+                    <h2>{{ doneTasks }}</h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <h5>Project Completion</h5>
+
+            <div class="progress mt-3" style="height: 30px;">
+                <div class="progress-bar"
+                     role="progressbar"
+                     style="width: {{ completionRate }}%">
+                    {{ completionRate }}%
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card shadow-sm mt-4">
+    <div class="card-body">
+
+        <h5>📜 Recent Activity</h5>
+
+        {% if recentActivities is empty %}
+            <p class="text-muted mt-3">
+                No activity yet.
+            </p>
+        {% else %}
+            <ul class="list-group mt-3">
+
+                {% for activity in recentActivities %}
+                    <li class="list-group-item">
+
+                        <div class="d-flex justify-content-between">
+                            <span>
+                                {{ activity.message }}
+                            </span>
+
+                            <small class="text-muted">
+                                {{ activity.createdAt|date('d/m/Y H:i') }}
+                            </small>
+                        </div>
+
+                    </li>
+                {% endfor %}
+
+            </ul>
+        {% endif %}
+
+    </div>
+</div>
 
 </div>
 {% endblock %}

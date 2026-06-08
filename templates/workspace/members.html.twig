@@ -1,0 +1,74 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Members{% endblock %}
+
+{% block body %}
+<div class="container mt-5">
+
+    <a href="{{ path('app_workspace_show', {'id': workspace.id}) }}"
+       class="btn btn-outline-secondary btn-sm mb-3">
+        ← Back to Workspace
+    </a>
+
+    <h1>{{ workspace.name }} Members</h1>
+
+    {% for label, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="alert alert-{{ label }} mt-3">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    <div class="card mt-4">
+        <div class="card-body">
+            <h5>Add Member</h5>
+
+            {{ form_start(form) }}
+                {{ form_widget(form) }}
+
+                <button class="btn btn-primary mt-2">
+                    Add Member
+                </button>
+            {{ form_end(form) }}
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-body">
+
+            <h5>Current Members</h5>
+
+            {% for member in workspace.members %}
+                <div class="d-flex justify-content-between border-bottom py-2">
+                    <span>{{ member.user.fullName }}</span>
+
+                    <div class="d-flex justify-content-between border-bottom py-2">
+
+    <span>{{ member.user.fullName }}</span>
+
+    <div>
+        <span class="badge bg-primary">
+            {{ member.role }}
+        </span>
+
+        {% if member.role != 'owner' %}
+            <a href="{{ path('app_workspace_member_remove', {'id': member.id}) }}"
+               class="btn btn-sm btn-danger"
+               onclick="return confirm('Remove member?')">
+                Remove
+            </a>
+        {% endif %}
+    </div>
+
+</div>
+                </div>
+            {% else %}
+                <p>No members found.</p>
+            {% endfor %}
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

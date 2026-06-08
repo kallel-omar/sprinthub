@@ -53,4 +53,18 @@ public function show(Project $project): Response
         'project' => $project,
     ]);
 }
+#[Route('/{id}/delete', name: 'app_project_delete')]
+public function delete(
+    Project $project,
+    EntityManagerInterface $entityManager
+): Response {
+    $workspaceId = $project->getWorkspace()->getId();
+
+    $entityManager->remove($project);
+    $entityManager->flush();
+
+    return $this->redirectToRoute('app_workspace_show', [
+        'id' => $workspaceId,
+    ]);
+}
 }

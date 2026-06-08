@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\TaskRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -41,13 +43,38 @@ class Task
 
     #[ORM\ManyToOne(inversedBy: 'assignedTasks')]
     private ?User $assignee = null;
-    
+
+    /**
+     * @var Collection<int, TaskComment>
+     */
+    #[ORM\OneToMany(
+        targetEntity: TaskComment::class,
+        mappedBy: 'task',
+        orphanRemoval: true
+    )]
+    private Collection $comments;
+
+    /**
+     * @var Collection<int, TaskAttachment>
+     */
+    #[ORM\OneToMany(targetEntity: TaskAttachment::class, mappedBy: 'task',   orphanRemoval: true)]
+    private Collection $attachments;
+
+    /**
+     * @var Collection<int, ActivityLog>
+     */
+    #[ORM\OneToMany(targetEntity: ActivityLog::class, mappedBy: 'task')]
+    private Collection $activityLogs;
+
     public function __construct()
     {
-         $this->createdAt = new \DateTimeImmutable();
-         $this->status = 'todo';
+        $this->createdAt = new \DateTimeImmutable();
+        $this->status = 'todo';
+        $this->comments = new ArrayCollection();
+        $this->attachments = new ArrayCollection();
+        $this->activityLogs = new ArrayCollection();
     }
-    
+
     public function getId(): ?int
     {
         return $this->id;
@@ -160,4 +187,94 @@ class Task
 
         return $this;
     }
+
+    /**
+     * @return Collection<int, TaskComment>
+     */
+    public function getComments(): Collection
+    {
+        return $this->comments;
+    }
+
+    public function addComment(TaskComment $comment): static
+    {
+        if (!$this->comments->contains($comment)) {
+            $this->comments->add($comment);
+            $comment->setTask($this);
+        }
+
+        return $this;
+    }
+
+    public function removeComment(TaskComment $comment): static
+    {
+        if ($this->comments->removeElement($comment)) {
+            if ($comment->getTask() === $this) {
+                $comment->setTask(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, TaskAttachment>
+     */
+    public function getAttachments(): Collection
+    {
+        return $this->attachments;
+    }
+
+    public function addAttachment(TaskAttachment $attachment): static
+    {
+        if (!$this->attachments->contains($attachment)) {
+            $this->attachments->add($attachment);
+            $attachment->setTask($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAttachment(TaskAttachment $attachment): static
+    {
+        if ($this->attachments->removeElement($attachment)) {
+            // set the owning side to null (unless already changed)
+            if ($attachment->getTask() === $this) {
+                $attachment->setTask(null);
+            }
+        }
+
+        return $this;
+    }
+
+
+
+    /**
+ * @return Collection<int, ActivityLog>
+ */
+public function getActivityLogs(): Collection
+{
+    return $this->activityLogs;
+}
+
+public function addActivityLog(ActivityLog $activityLog): static
+{
+    if (!$this->activityLogs->contains($activityLog)) {
+        $this->activityLogs->add($activityLog);
+        $activityLog->setTask($this);
+    }
+
+    return $this;
+}
+
+public function removeActivityLog(ActivityLog $activityLog): static
+{
+    if ($this->activityLogs->removeElement($activityLog)) {
+        if ($activityLog->getTask() === $this) {
+            $activityLog->setTask(null);
+        }
+    }
+
+    return $this;
+}
 }
