@@ -9,6 +9,7 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use App\Entity\Label;
 
 class TaskType extends AbstractType
 {
@@ -26,9 +27,17 @@ class TaskType extends AbstractType
             ])
             ->add('dueDate')
             ->add('assignee', EntityType::class, [
-                        'class' => User::class,
-                        'choice_label' => 'fullName',
-                        'required' => false,
+                'class' => User::class,
+                'choice_label' => 'fullName',
+                'required' => false,
+            ])
+
+            ->add('labels', EntityType::class, [
+                'class' => Label::class,
+                'choice_label' => 'name',
+                'multiple' => true,
+                'expanded' => true,
+                'required' => false,
             ])
         ;
     }

@@ -98,6 +98,91 @@
 
     <div class="row mt-4">
 
+        <div class="col-md-4 mb-3">
+            <div class="card border-danger text-center">
+                <div class="card-body">
+                    <h5>⚠️ Overdue</h5>
+                    <h2>{{ overdueTasks|length }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card border-warning text-center">
+                <div class="card-body">
+                    <h5>📅 Due Today</h5>
+                    <h2>{{ dueTodayTasks|length }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card border-info text-center">
+                <div class="card-body">
+                    <h5>📆 Due This Week</h5>
+                    <h2>{{ dueThisWeekTasks|length }}</h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <h5>⏰ Deadline Tasks</h5>
+
+            <h6 class="text-danger mt-3">Overdue</h6>
+            {% for task in overdueTasks %}
+                <div class="border-bottom py-2">
+                    <a href="{{ path('app_task_show', {'id': task.id}) }}"
+                       class="text-decoration-none fw-bold">
+                        {{ task.title }}
+                    </a>
+
+                    <small class="text-danger d-block">
+                        Due: {{ task.dueDate|date('d/m/Y') }}
+                    </small>
+                </div>
+            {% else %}
+                <p class="text-muted">No overdue tasks.</p>
+            {% endfor %}
+
+            <h6 class="text-warning mt-3">Due Today</h6>
+            {% for task in dueTodayTasks %}
+                <div class="border-bottom py-2">
+                    <a href="{{ path('app_task_show', {'id': task.id}) }}"
+                       class="text-decoration-none fw-bold">
+                        {{ task.title }}
+                    </a>
+
+                    <small class="text-warning d-block">
+                        Due: {{ task.dueDate|date('d/m/Y') }}
+                    </small>
+                </div>
+            {% else %}
+                <p class="text-muted">No tasks due today.</p>
+            {% endfor %}
+
+            <h6 class="text-info mt-3">Due This Week</h6>
+            {% for task in dueThisWeekTasks %}
+                <div class="border-bottom py-2">
+                    <a href="{{ path('app_task_show', {'id': task.id}) }}"
+                       class="text-decoration-none fw-bold">
+                        {{ task.title }}
+                    </a>
+
+                    <small class="text-info d-block">
+                        Due: {{ task.dueDate|date('d/m/Y') }}
+                    </small>
+                </div>
+            {% else %}
+                <p class="text-muted">No tasks due this week.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="row mt-4">
+
         <div class="col-md-6 mb-3">
             <div class="card shadow-sm h-100">
                 <div class="card-body">

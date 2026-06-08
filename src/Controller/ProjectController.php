@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Project;
 use App\Entity\Workspace;
 use App\Form\ProjectType;
+use App\Repository\LabelRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -46,11 +47,70 @@ final class ProjectController extends AbstractController
             'workspace' => $workspace,
         ]);
     }
-    #[Route('/{id}', name: 'app_project_show')]
-public function show(Project $project): Response
-{
+   
+
+   #[Route('/{id}', name: 'app_project_show')]
+#[Route('/{id}', name: 'app_project_show')]
+public function show(
+    Project $project,
+    Request $request,
+    LabelRepository $labelRepository
+): Response {
+
+    $search = $request->query->get('search');
+    $priority = $request->query->get('priority');
+    $status = $request->query->get('status');
+    $labelId = $request->query->get('label');
+
+    $labels = $labelRepository->findAll();
+
+    $tasks = $project->getTasks();
+
+    $tasks = $tasks->filter(function ($task) use (
+        $search,
+        $priority,
+        $status,
+        $labelId
+    ) {
+
+        if ($search && stripos($task->getTitle(), $search) === false) {
+            return false;
+        }
+
+        if ($priority && $task->getPriority() !== $priority) {
+            return false;
+        }
+
+        if ($status && $task->getStatus() !== $status) {
+            return false;
+        }
+
+        if ($labelId) {
+            $hasLabel = false;
+
+            foreach ($task->getLabels() as $label) {
+                if ($label->getId() == $labelId) {
+                    $hasLabel = true;
+                    break;
+                }
+            }
+
+            if (!$hasLabel) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+
     return $this->render('project/show.html.twig', [
         'project' => $project,
+        'tasks' => $tasks,
+        'labels' => $labels,
+        'search' => $search,
+        'priority' => $priority,
+        'status' => $status,
+        'selectedLabel' => $labelId,
     ]);
 }
 #[Route('/{id}/delete', name: 'app_project_delete')]

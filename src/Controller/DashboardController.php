@@ -24,6 +24,32 @@ final class DashboardController extends AbstractController
         /** @var \App\Entity\User $user */
         $user = $this->getUser();
 
+        $today = new \DateTimeImmutable('today');
+        $tomorrow = $today->modify('+1 day');
+        $endOfWeek = $today->modify('+7 days');
+
+        $allMyTasks = $taskRepository->findBy([
+            'assignee' => $user,
+        ]);
+
+        $overdueTasks = [];
+        $dueTodayTasks = [];
+        $dueThisWeekTasks = [];
+
+        foreach ($allMyTasks as $task) {
+            if (!$task->getDueDate() || $task->getStatus() === 'done') {
+                continue;
+            }
+
+            if ($task->getDueDate() < $today) {
+                $overdueTasks[] = $task;
+            } elseif ($task->getDueDate() >= $today && $task->getDueDate() < $tomorrow) {
+                $dueTodayTasks[] = $task;
+            } elseif ($task->getDueDate() >= $tomorrow && $task->getDueDate() <= $endOfWeek) {
+                $dueThisWeekTasks[] = $task;
+            }
+        }
+
         $myTasks = $taskRepository->findBy(
             ['assignee' => $user],
             ['createdAt' => 'DESC'],
@@ -73,6 +99,11 @@ final class DashboardController extends AbstractController
             'myInProgressTasks' => $myInProgressTasks,
             'myDoneTasks' => $myDoneTasks,
             'myCompletionRate' => $myCompletionRate,
+
+            'overdueTasks' => $overdueTasks,
+            'dueTodayTasks' => $dueTodayTasks,
+            'dueThisWeekTasks' => $dueThisWeekTasks,
+
             'unreadNotifications' => $unreadNotifications,
             'recentActivities' => $recentActivities,
         ]);

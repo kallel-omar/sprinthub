@@ -66,6 +66,12 @@ class Task
     #[ORM\OneToMany(targetEntity: ActivityLog::class, mappedBy: 'task')]
     private Collection $activityLogs;
 
+    /**
+     * @var Collection<int, Label>
+     */
+    #[ORM\ManyToMany(targetEntity: Label::class, inversedBy: 'tasks')]
+    private Collection $labels;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -73,6 +79,7 @@ class Task
         $this->comments = new ArrayCollection();
         $this->attachments = new ArrayCollection();
         $this->activityLogs = new ArrayCollection();
+        $this->labels = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -273,6 +280,33 @@ public function removeActivityLog(ActivityLog $activityLog): static
         if ($activityLog->getTask() === $this) {
             $activityLog->setTask(null);
         }
+    }
+
+    return $this;
+}
+
+/**
+ * @return Collection<int, Label>
+ */
+public function getLabels(): Collection
+{
+    return $this->labels;
+}
+
+public function addLabel(Label $label): static
+{
+    if (!$this->labels->contains($label)) {
+        $this->labels->add($label);
+        $label->addTask($this);
+    }
+
+    return $this;
+}
+
+public function removeLabel(Label $label): static
+{
+    if ($this->labels->removeElement($label)) {
+        $label->removeTask($this);
     }
 
     return $this;

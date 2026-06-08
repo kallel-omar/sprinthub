@@ -16,33 +16,43 @@
         Project: {{ project.name }}
     </p>
 
-    {{ form_start(form) }}
+    <div class="card shadow-sm">
+        <div class="card-body">
 
-        <div class="mb-3">
-            {{ form_row(form.title) }}
+            {{ form_start(form) }}
+
+                <div class="mb-3">
+                    {{ form_row(form.title) }}
+                </div>
+
+                <div class="mb-3">
+                    {{ form_row(form.description) }}
+                </div>
+
+                <div class="mb-3">
+                    {{ form_row(form.priority) }}
+                </div>
+
+                <div class="mb-3">
+                    {{ form_row(form.dueDate) }}
+                </div>
+
+                <div class="mb-3">
+                    {{ form_row(form.assignee) }}
+                </div>
+
+                <div class="mb-3">
+                    {{ form_row(form.labels) }}
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Create Task
+                </button>
+
+            {{ form_end(form) }}
+
         </div>
-
-        <div class="mb-3">
-            {{ form_row(form.description) }}
-        </div>
-
-        <div class="mb-3">
-            {{ form_row(form.priority) }}
-        </div>
-
-        <div class="mb-3">
-            {{ form_row(form.dueDate) }}
-        </div>
-
-        <div class="mb-3">
-            {{ form_row(form.assignee) }}
-        </div>
-
-        <button type="submit" class="btn btn-primary">
-            Create Task
-        </button>
-
-    {{ form_end(form) }}
+    </div>
 
 </div>
 {% endblock %}
