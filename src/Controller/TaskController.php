@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\ActivityLog;
 use App\Entity\Project;
 use App\Entity\Task;
 use App\Entity\TaskAttachment;
@@ -16,7 +17,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
-use App\Entity\ActivityLog;
 
 #[Route('/tasks')]
 final class TaskController extends AbstractController
@@ -33,9 +33,19 @@ final class TaskController extends AbstractController
             $task->setProject($project);
 
             $entityManager->persist($task);
+
+            $this->createActivityLog(
+                $entityManager,
+                'task_created',
+                $this->getUser()->getFullName() . ' created task "' . $task->getTitle() . '"',
+                $task
+            );
+
             $entityManager->flush();
 
-            return $this->redirectToRoute('app_project_show', ['id' => $project->getId()]);
+            return $this->redirectToRoute('app_project_show', [
+                'id' => $project->getId(),
+            ]);
         }
 
         return $this->render('task/new.html.twig', [
@@ -48,18 +58,38 @@ final class TaskController extends AbstractController
     public function start(Task $task, EntityManagerInterface $entityManager): Response
     {
         $task->setStatus('in_progress');
+
+        $this->createActivityLog(
+            $entityManager,
+            'task_started',
+            $this->getUser()->getFullName() . ' started task "' . $task->getTitle() . '"',
+            $task
+        );
+
         $entityManager->flush();
 
-        return $this->redirectToRoute('app_project_show', ['id' => $task->getProject()->getId()]);
+        return $this->redirectToRoute('app_project_show', [
+            'id' => $task->getProject()->getId(),
+        ]);
     }
 
     #[Route('/{id}/done', name: 'app_task_done')]
     public function done(Task $task, EntityManagerInterface $entityManager): Response
     {
         $task->setStatus('done');
+
+        $this->createActivityLog(
+            $entityManager,
+            'task_completed',
+            $this->getUser()->getFullName() . ' completed task "' . $task->getTitle() . '"',
+            $task
+        );
+
         $entityManager->flush();
 
-        return $this->redirectToRoute('app_project_show', ['id' => $task->getProject()->getId()]);
+        return $this->redirectToRoute('app_project_show', [
+            'id' => $task->getProject()->getId(),
+        ]);
     }
 
     #[Route('/{id}/edit', name: 'app_task_edit')]
@@ -70,9 +100,19 @@ final class TaskController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $task->setUpdatedAt(new \DateTimeImmutable());
+
+            $this->createActivityLog(
+                $entityManager,
+                'task_updated',
+                $this->getUser()->getFullName() . ' updated task "' . $task->getTitle() . '"',
+                $task
+            );
+
             $entityManager->flush();
 
-            return $this->redirectToRoute('app_project_show', ['id' => $task->getProject()->getId()]);
+            return $this->redirectToRoute('app_project_show', [
+                'id' => $task->getProject()->getId(),
+            ]);
         }
 
         return $this->render('task/edit.html.twig', [
@@ -86,10 +126,19 @@ final class TaskController extends AbstractController
     {
         $projectId = $task->getProject()->getId();
 
+        $this->createActivityLog(
+            $entityManager,
+            'task_deleted',
+            $this->getUser()->getFullName() . ' deleted task "' . $task->getTitle() . '"',
+            $task
+        );
+
         $entityManager->remove($task);
         $entityManager->flush();
 
-        return $this->redirectToRoute('app_project_show', ['id' => $projectId]);
+        return $this->redirectToRoute('app_project_show', [
+            'id' => $projectId,
+        ]);
     }
 
     #[Route('/{id}', name: 'app_task_show')]
@@ -105,30 +154,22 @@ final class TaskController extends AbstractController
 
         if ($commentForm->isSubmitted() && $commentForm->isValid()) {
             $comment->setTask($task);
-$comment->setUser($this->getUser());
+            $comment->setUser($this->getUser());
 
-$entityManager->persist($comment);
+            $entityManager->persist($comment);
 
-$log = new ActivityLog();
-$log->setUser($this->getUser());
-$log->setTask($task);
-$log->setProject($task->getProject());
-$log->setWorkspace($task->getProject()->getWorkspace());
+            $this->createActivityLog(
+                $entityManager,
+                'comment',
+                $this->getUser()->getFullName() . ' commented on task "' . $task->getTitle() . '"',
+                $task
+            );
 
-$log->setType('comment');
+            $entityManager->flush();
 
-$log->setMessage(
-    $this->getUser()->getFullName()
-    . ' commented on task "'
-    . $task->getTitle()
-    . '"'
-);
-
-$entityManager->persist($log);
-
-$entityManager->flush();
-
-            return $this->redirectToRoute('app_task_show', ['id' => $task->getId()]);
+            return $this->redirectToRoute('app_task_show', [
+                'id' => $task->getId(),
+            ]);
         }
 
         $attachment = new TaskAttachment();
@@ -139,38 +180,48 @@ $entityManager->flush();
             $uploadedFile = $attachmentForm->get('file')->getData();
 
             if ($uploadedFile) {
-    $originalName = $uploadedFile->getClientOriginalName();
-    $mimeType = $uploadedFile->getMimeType();
-    $extension = $uploadedFile->guessExtension() ?: $uploadedFile->getClientOriginalExtension();
+                $originalName = $uploadedFile->getClientOriginalName();
+                $mimeType = $uploadedFile->getMimeType();
+                $extension = $uploadedFile->guessExtension() ?: $uploadedFile->getClientOriginalExtension();
 
-    $originalFilename = pathinfo($originalName, PATHINFO_FILENAME);
-    $safeFilename = $slugger->slug($originalFilename);
-    $newFilename = $safeFilename . '-' . uniqid() . '.' . $extension;
+                $originalFilename = pathinfo($originalName, PATHINFO_FILENAME);
+                $safeFilename = $slugger->slug($originalFilename);
+                $newFilename = $safeFilename . '-' . uniqid() . '.' . $extension;
 
-    try {
-        $uploadedFile->move(
-            $this->getParameter('task_attachments_directory'),
-            $newFilename
-        );
-    } catch (FileException $e) {
-        $this->addFlash('danger', 'File upload failed.');
+                try {
+                    $uploadedFile->move(
+                        $this->getParameter('task_attachments_directory'),
+                        $newFilename
+                    );
+                } catch (FileException $e) {
+                    $this->addFlash('danger', 'File upload failed.');
 
-        return $this->redirectToRoute('app_task_show', [
-            'id' => $task->getId(),
-        ]);
-    }
+                    return $this->redirectToRoute('app_task_show', [
+                        'id' => $task->getId(),
+                    ]);
+                }
 
-    $attachment->setFileName($newFilename);
-    $attachment->setOriginalName($originalName);
-    $attachment->setMimeType($mimeType);
-    $attachment->setTask($task);
-    $attachment->setUploadedBy($this->getUser());
+                $attachment->setFileName($newFilename);
+                $attachment->setOriginalName($originalName);
+                $attachment->setMimeType($mimeType);
+                $attachment->setTask($task);
+                $attachment->setUploadedBy($this->getUser());
 
-    $entityManager->persist($attachment);
-    $entityManager->flush();
-}
+                $entityManager->persist($attachment);
 
-            return $this->redirectToRoute('app_task_show', ['id' => $task->getId()]);
+                $this->createActivityLog(
+                    $entityManager,
+                    'file_uploaded',
+                    $this->getUser()->getFullName() . ' uploaded file "' . $originalName . '" to task "' . $task->getTitle() . '"',
+                    $task
+                );
+
+                $entityManager->flush();
+            }
+
+            return $this->redirectToRoute('app_task_show', [
+                'id' => $task->getId(),
+            ]);
         }
 
         return $this->render('task/show.html.twig', [
@@ -179,26 +230,53 @@ $entityManager->flush();
             'attachmentForm' => $attachmentForm->createView(),
         ]);
     }
+
     #[Route('/attachment/{id}/delete', name: 'app_attachment_delete')]
-public function deleteAttachment(
-    TaskAttachment $attachment,
-    EntityManagerInterface $entityManager
-): Response {
+    public function deleteAttachment(
+        TaskAttachment $attachment,
+        EntityManagerInterface $entityManager
+    ): Response {
+        $task = $attachment->getTask();
+        $taskId = $task->getId();
+        $originalName = $attachment->getOriginalName();
 
-    $taskId = $attachment->getTask()->getId();
+        $filePath = $this->getParameter('task_attachments_directory')
+            . '/' . $attachment->getFileName();
 
-    $filePath = $this->getParameter('task_attachments_directory')
-        . '/' . $attachment->getFileName();
+        if (file_exists($filePath)) {
+            unlink($filePath);
+        }
 
-    if (file_exists($filePath)) {
-        unlink($filePath);
+        $this->createActivityLog(
+            $entityManager,
+            'file_deleted',
+            $this->getUser()->getFullName() . ' deleted file "' . $originalName . '" from task "' . $task->getTitle() . '"',
+            $task
+        );
+
+        $entityManager->remove($attachment);
+        $entityManager->flush();
+
+        return $this->redirectToRoute('app_task_show', [
+            'id' => $taskId,
+        ]);
     }
 
-    $entityManager->remove($attachment);
-    $entityManager->flush();
+    private function createActivityLog(
+        EntityManagerInterface $entityManager,
+        string $type,
+        string $message,
+        Task $task
+    ): void {
+        $log = new ActivityLog();
 
-    return $this->redirectToRoute('app_task_show', [
-        'id' => $taskId,
-    ]);
-}
+        $log->setUser($this->getUser());
+        $log->setType($type);
+        $log->setMessage($message);
+        $log->setTask($task);
+        $log->setProject($task->getProject());
+        $log->setWorkspace($task->getProject()->getWorkspace());
+
+        $entityManager->persist($log);
+    }
 }
