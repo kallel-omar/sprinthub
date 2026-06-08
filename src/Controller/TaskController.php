@@ -354,4 +354,34 @@ if ($checklistForm->isSubmitted() && $checklistForm->isValid()) {
         'status' => $task->getStatus(),
     ]);
 }
+#[Route('/checklist/{id}/toggle', name: 'app_checklist_toggle')]
+public function toggleChecklist(
+    TaskChecklistItem $item,
+    EntityManagerInterface $entityManager
+): Response {
+
+    $item->setIsDone(!$item->isDone());
+
+    $entityManager->flush();
+
+    return $this->redirectToRoute('app_task_show', [
+        'id' => $item->getTask()->getId(),
+    ]);
+}
+
+#[Route('/checklist/{id}/delete', name: 'app_checklist_delete')]
+public function deleteChecklist(
+    TaskChecklistItem $item,
+    EntityManagerInterface $entityManager
+): Response {
+
+    $taskId = $item->getTask()->getId();
+
+    $entityManager->remove($item);
+    $entityManager->flush();
+
+    return $this->redirectToRoute('app_task_show', [
+        'id' => $taskId,
+    ]);
+}
 }

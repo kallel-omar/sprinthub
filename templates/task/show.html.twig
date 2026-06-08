@@ -29,6 +29,30 @@
     <div class="card mb-4">
         <div class="card-body">
 
+            <div class="mb-4">
+                <div class="d-flex justify-content-between">
+                    <strong>
+                        Progress:
+                        {{ task.checklistCompletedCount }}
+                        /
+                        {{ task.checklistTotalCount }}
+                        completed
+                    </strong>
+
+                    <strong>
+                        {{ task.checklistProgress }}%
+                    </strong>
+                </div>
+
+                <div class="progress mt-2" style="height: 25px;">
+                    <div class="progress-bar bg-success"
+                         role="progressbar"
+                         style="width: {{ task.checklistProgress }}%;">
+                        {{ task.checklistProgress }}%
+                    </div>
+                </div>
+            </div>
+
             {% for item in task.checklistItems %}
                 <div class="d-flex justify-content-between align-items-center border-bottom py-2">
 
@@ -43,13 +67,14 @@
                     </div>
 
                     <div>
-                        <a href="#"
+                        <a href="{{ path('app_checklist_toggle', {'id': item.id}) }}"
                            class="btn btn-sm btn-outline-success">
                             Toggle
                         </a>
 
-                        <a href="#"
-                           class="btn btn-sm btn-outline-danger">
+                        <a href="{{ path('app_checklist_delete', {'id': item.id}) }}"
+                           class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Delete this item?')">
                             Delete
                         </a>
                     </div>

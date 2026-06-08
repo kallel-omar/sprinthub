@@ -335,4 +335,32 @@ class Task
 
         return $this;
     }
+    public function getChecklistCompletedCount(): int
+{
+    $count = 0;
+
+    foreach ($this->checklistItems as $item) {
+        if ($item->isDone()) {
+            $count++;
+        }
+    }
+
+    return $count;
+}
+
+public function getChecklistTotalCount(): int
+{
+    return $this->checklistItems->count();
+}
+
+public function getChecklistProgress(): float
+{
+    $total = $this->getChecklistTotalCount();
+
+    if ($total === 0) {
+        return 0;
+    }
+
+    return round(($this->getChecklistCompletedCount() / $total) * 100, 1);
+}
 }
