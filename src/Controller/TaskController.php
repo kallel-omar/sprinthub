@@ -11,6 +11,8 @@ use App\Form\TaskAttachmentType;
 use App\Form\TaskCommentType;
 use App\Form\TaskType;
 use App\Entity\Notification;
+use App\Entity\TaskChecklistItem;
+use App\Form\TaskChecklistItemType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
@@ -190,6 +192,27 @@ final class TaskController extends AbstractController
         $attachment = new TaskAttachment();
         $attachmentForm = $this->createForm(TaskAttachmentType::class, $attachment);
         $attachmentForm->handleRequest($request);
+        $checklistItem = new TaskChecklistItem();
+
+$checklistForm = $this->createForm(
+    TaskChecklistItemType::class,
+    $checklistItem
+);
+
+$checklistForm->handleRequest($request);
+
+if ($checklistForm->isSubmitted() && $checklistForm->isValid()) {
+
+    $checklistItem->setTask($task);
+
+    $entityManager->persist($checklistItem);
+
+    $entityManager->flush();
+
+    return $this->redirectToRoute('app_task_show', [
+        'id' => $task->getId(),
+    ]);
+}
 
         if ($attachmentForm->isSubmitted() && $attachmentForm->isValid()) {
             $uploadedFile = $attachmentForm->get('file')->getData();
@@ -243,6 +266,7 @@ final class TaskController extends AbstractController
             'task' => $task,
             'commentForm' => $commentForm->createView(),
             'attachmentForm' => $attachmentForm->createView(),
+            'checklistForm' => $checklistForm->createView(),
         ]);
     }
 

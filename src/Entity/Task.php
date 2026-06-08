@@ -47,17 +47,13 @@ class Task
     /**
      * @var Collection<int, TaskComment>
      */
-    #[ORM\OneToMany(
-        targetEntity: TaskComment::class,
-        mappedBy: 'task',
-        orphanRemoval: true
-    )]
+    #[ORM\OneToMany(targetEntity: TaskComment::class, mappedBy: 'task', orphanRemoval: true)]
     private Collection $comments;
 
     /**
      * @var Collection<int, TaskAttachment>
      */
-    #[ORM\OneToMany(targetEntity: TaskAttachment::class, mappedBy: 'task',   orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: TaskAttachment::class, mappedBy: 'task', orphanRemoval: true)]
     private Collection $attachments;
 
     /**
@@ -72,6 +68,16 @@ class Task
     #[ORM\ManyToMany(targetEntity: Label::class, inversedBy: 'tasks')]
     private Collection $labels;
 
+    /**
+     * @var Collection<int, TaskChecklistItem>
+     */
+    #[ORM\OneToMany(
+        targetEntity: TaskChecklistItem::class,
+        mappedBy: 'task',
+        orphanRemoval: true
+    )]
+    private Collection $checklistItems;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -80,6 +86,7 @@ class Task
         $this->attachments = new ArrayCollection();
         $this->activityLogs = new ArrayCollection();
         $this->labels = new ArrayCollection();
+        $this->checklistItems = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -95,7 +102,6 @@ class Task
     public function setTitle(string $title): static
     {
         $this->title = $title;
-
         return $this;
     }
 
@@ -107,7 +113,6 @@ class Task
     public function setDescription(?string $description): static
     {
         $this->description = $description;
-
         return $this;
     }
 
@@ -119,7 +124,6 @@ class Task
     public function setPriority(string $priority): static
     {
         $this->priority = $priority;
-
         return $this;
     }
 
@@ -131,7 +135,6 @@ class Task
     public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
-
         return $this;
     }
 
@@ -143,7 +146,6 @@ class Task
     public function setUpdatedAt(?\DateTimeImmutable $updatedAt): static
     {
         $this->updatedAt = $updatedAt;
-
         return $this;
     }
 
@@ -155,7 +157,6 @@ class Task
     public function setProject(?Project $project): static
     {
         $this->project = $project;
-
         return $this;
     }
 
@@ -167,7 +168,6 @@ class Task
     public function setStatus(string $status): static
     {
         $this->status = $status;
-
         return $this;
     }
 
@@ -179,7 +179,6 @@ class Task
     public function setDueDate(?\DateTimeImmutable $dueDate): static
     {
         $this->dueDate = $dueDate;
-
         return $this;
     }
 
@@ -191,7 +190,6 @@ class Task
     public function setAssignee(?User $assignee): static
     {
         $this->assignee = $assignee;
-
         return $this;
     }
 
@@ -245,7 +243,6 @@ class Task
     public function removeAttachment(TaskAttachment $attachment): static
     {
         if ($this->attachments->removeElement($attachment)) {
-            // set the owning side to null (unless already changed)
             if ($attachment->getTask() === $this) {
                 $attachment->setTask(null);
             }
@@ -254,61 +251,88 @@ class Task
         return $this;
     }
 
+    /**
+     * @return Collection<int, ActivityLog>
+     */
+    public function getActivityLogs(): Collection
+    {
+        return $this->activityLogs;
+    }
 
+    public function addActivityLog(ActivityLog $activityLog): static
+    {
+        if (!$this->activityLogs->contains($activityLog)) {
+            $this->activityLogs->add($activityLog);
+            $activityLog->setTask($this);
+        }
+
+        return $this;
+    }
+
+    public function removeActivityLog(ActivityLog $activityLog): static
+    {
+        if ($this->activityLogs->removeElement($activityLog)) {
+            if ($activityLog->getTask() === $this) {
+                $activityLog->setTask(null);
+            }
+        }
+
+        return $this;
+    }
 
     /**
- * @return Collection<int, ActivityLog>
- */
-public function getActivityLogs(): Collection
-{
-    return $this->activityLogs;
-}
-
-public function addActivityLog(ActivityLog $activityLog): static
-{
-    if (!$this->activityLogs->contains($activityLog)) {
-        $this->activityLogs->add($activityLog);
-        $activityLog->setTask($this);
+     * @return Collection<int, Label>
+     */
+    public function getLabels(): Collection
+    {
+        return $this->labels;
     }
 
-    return $this;
-}
-
-public function removeActivityLog(ActivityLog $activityLog): static
-{
-    if ($this->activityLogs->removeElement($activityLog)) {
-        if ($activityLog->getTask() === $this) {
-            $activityLog->setTask(null);
+    public function addLabel(Label $label): static
+    {
+        if (!$this->labels->contains($label)) {
+            $this->labels->add($label);
+            $label->addTask($this);
         }
+
+        return $this;
     }
 
-    return $this;
-}
+    public function removeLabel(Label $label): static
+    {
+        if ($this->labels->removeElement($label)) {
+            $label->removeTask($this);
+        }
 
-/**
- * @return Collection<int, Label>
- */
-public function getLabels(): Collection
-{
-    return $this->labels;
-}
-
-public function addLabel(Label $label): static
-{
-    if (!$this->labels->contains($label)) {
-        $this->labels->add($label);
-        $label->addTask($this);
+        return $this;
     }
 
-    return $this;
-}
-
-public function removeLabel(Label $label): static
-{
-    if ($this->labels->removeElement($label)) {
-        $label->removeTask($this);
+    /**
+     * @return Collection<int, TaskChecklistItem>
+     */
+    public function getChecklistItems(): Collection
+    {
+        return $this->checklistItems;
     }
 
-    return $this;
-}
+    public function addChecklistItem(TaskChecklistItem $checklistItem): static
+    {
+        if (!$this->checklistItems->contains($checklistItem)) {
+            $this->checklistItems->add($checklistItem);
+            $checklistItem->setTask($this);
+        }
+
+        return $this;
+    }
+
+    public function removeChecklistItem(TaskChecklistItem $checklistItem): static
+    {
+        if ($this->checklistItems->removeElement($checklistItem)) {
+            if ($checklistItem->getTask() === $this) {
+                $checklistItem->setTask(null);
+            }
+        }
+
+        return $this;
+    }
 }

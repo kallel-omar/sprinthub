@@ -8,7 +8,7 @@
     <h1 class="mb-4">🚀 SprintHub Dashboard</h1>
 
     <p class="text-muted">
-        Welcome back, <strong>{{ app.user.fullName }}</strong>
+       Welcome back, <strong>{{ app.user ? app.user.fullName : 'Guest' }}</strong>
     </p>
 
     <div class="row mt-4">
