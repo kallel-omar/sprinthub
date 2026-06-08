@@ -34,179 +34,79 @@
 
             <div class="row">
 
-                {# TO DO #}
-                <div class="col-md-4">
-                    <div class="card shadow-sm">
-                        <div class="card-header fw-bold">To Do</div>
+                {% set statuses = {
+                    'todo': 'To Do',
+                    'in_progress': 'In Progress',
+                    'done': 'Done'
+                } %}
 
-                        <div class="card-body">
-                            {% for task in project.tasks %}
-                                {% if task.status == 'todo' %}
-                                    <div class="card mb-2">
-                                        <div class="card-body">
-                                           <h6>
-    <a href="{{ path('app_task_show', {'id': task.id}) }}"
-       class="text-decoration-none">
-        {{ task.title }}
-    </a>
-</h6>
+                {% for statusKey, statusLabel in statuses %}
+                    <div class="col-md-4">
+                        <div class="card shadow-sm">
+                            <div class="card-header fw-bold">
+                                {{ statusLabel }}
+                            </div>
 
-                                            <p class="text-muted small">
-                                                {{ task.description|default('No description') }}
-                                            </p>
+                            <div class="card-body kanban-column"
+                                 data-status="{{ statusKey }}"
+                                 style="min-height: 200px;">
 
-                                            {% if task.dueDate %}
-                                                <p class="small text-danger mt-2 mb-1">
-                                                    📅 Due: {{ task.dueDate|date('d/m/Y') }}
+                                {% for task in project.tasks %}
+                                    {% if task.status == statusKey %}
+                                        <div class="card mb-2 kanban-task"
+                                             draggable="true"
+                                             data-task-id="{{ task.id }}">
+                                            <div class="card-body">
+
+                                                <h6>
+                                                    <a href="{{ path('app_task_show', {'id': task.id}) }}"
+                                                       class="text-decoration-none">
+                                                        {{ task.title }}
+                                                    </a>
+                                                </h6>
+
+                                                <p class="text-muted small">
+                                                    {{ task.description|default('No description') }}
                                                 </p>
-                                            {% endif %}
 
-                                            {% if task.assignee %}
-                                                <p class="small text-primary mb-1">
-                                                    👤 Assigned to: {{ task.assignee.fullName }}
-                                                </p>
-                                            {% endif %}
+                                                {% if task.dueDate %}
+                                                    <p class="small text-danger mt-2 mb-1">
+                                                        📅 Due: {{ task.dueDate|date('d/m/Y') }}
+                                                    </p>
+                                                {% endif %}
 
-                                            <span class="badge bg-primary">{{ task.priority }}</span>
+                                                {% if task.assignee %}
+                                                    <p class="small text-primary mb-1">
+                                                        👤 Assigned to: {{ task.assignee.fullName }}
+                                                    </p>
+                                                {% endif %}
 
-                                            <br>
+                                                <span class="badge bg-primary">
+                                                    {{ task.priority }}
+                                                </span>
 
-                                            <a href="{{ path('app_task_start', {'id': task.id}) }}"
-                                               class="btn btn-warning btn-sm mt-2">
-                                                Start
-                                            </a>
+                                                <br>
 
-                                            <a href="{{ path('app_task_edit', {'id': task.id}) }}"
-                                               class="btn btn-outline-primary btn-sm mt-2">
-                                                Edit
-                                            </a>
+                                                <a href="{{ path('app_task_edit', {'id': task.id}) }}"
+                                                   class="btn btn-outline-primary btn-sm mt-2">
+                                                    Edit
+                                                </a>
 
-                                            <a href="{{ path('app_task_delete', {'id': task.id}) }}"
-                                               class="btn btn-outline-danger btn-sm mt-2"
-                                               onclick="return confirm('Are you sure you want to delete this task?');">
-                                                Delete
-                                            </a>
+                                                <a href="{{ path('app_task_delete', {'id': task.id}) }}"
+                                                   class="btn btn-outline-danger btn-sm mt-2"
+                                                   onclick="return confirm('Are you sure you want to delete this task?');">
+                                                    Delete
+                                                </a>
+
+                                            </div>
                                         </div>
-                                    </div>
-                                {% endif %}
-                            {% endfor %}
+                                    {% endif %}
+                                {% endfor %}
+
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                {# IN PROGRESS #}
-                <div class="col-md-4">
-                    <div class="card shadow-sm">
-                        <div class="card-header fw-bold">In Progress</div>
-
-                        <div class="card-body">
-                            {% for task in project.tasks %}
-                                {% if task.status == 'in_progress' %}
-                                    <div class="card mb-2">
-                                        <div class="card-body">
-                                            <h6>
-    <a href="{{ path('app_task_show', {'id': task.id}) }}"
-       class="text-decoration-none">
-        {{ task.title }}
-    </a>
-</h6>
-
-                                            <p class="text-muted small">
-                                                {{ task.description|default('No description') }}
-                                            </p>
-
-                                            {% if task.dueDate %}
-                                                <p class="small text-danger mt-2 mb-1">
-                                                    📅 Due: {{ task.dueDate|date('d/m/Y') }}
-                                                </p>
-                                            {% endif %}
-
-                                            {% if task.assignee %}
-                                                <p class="small text-primary mb-1">
-                                                    👤 Assigned to: {{ task.assignee.fullName }}
-                                                </p>
-                                            {% endif %}
-
-                                            <span class="badge bg-warning text-dark">{{ task.priority }}</span>
-
-                                            <br>
-
-                                            <a href="{{ path('app_task_done', {'id': task.id}) }}"
-                                               class="btn btn-success btn-sm mt-2">
-                                                Complete
-                                            </a>
-
-                                            <a href="{{ path('app_task_edit', {'id': task.id}) }}"
-                                               class="btn btn-outline-primary btn-sm mt-2">
-                                                Edit
-                                            </a>
-
-                                            <a href="{{ path('app_task_delete', {'id': task.id}) }}"
-                                               class="btn btn-outline-danger btn-sm mt-2"
-                                               onclick="return confirm('Are you sure you want to delete this task?');">
-                                                Delete
-                                            </a>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-
-                {# DONE #}
-                <div class="col-md-4">
-                    <div class="card shadow-sm">
-                        <div class="card-header fw-bold">Done</div>
-
-                        <div class="card-body">
-                            {% for task in project.tasks %}
-                                {% if task.status == 'done' %}
-                                    <div class="card mb-2">
-                                        <div class="card-body">
-                                            <h6>
-    <a href="{{ path('app_task_show', {'id': task.id}) }}"
-       class="text-decoration-none">
-        {{ task.title }}
-    </a>
-</h6>
-                                            <p class="text-muted small">
-                                                {{ task.description|default('No description') }}
-                                            </p>
-
-                                            {% if task.dueDate %}
-                                                <p class="small text-danger mt-2 mb-1">
-                                                    📅 Due: {{ task.dueDate|date('d/m/Y') }}
-                                                </p>
-                                            {% endif %}
-
-                                            {% if task.assignee %}
-                                                <p class="small text-primary mb-1">
-                                                    👤 Assigned to: {{ task.assignee.fullName }}
-                                                </p>
-                                            {% endif %}
-
-                                            <span class="badge bg-success">{{ task.priority }}</span>
-
-                                            <br>
-
-                                            <a href="{{ path('app_task_edit', {'id': task.id}) }}"
-                                               class="btn btn-outline-primary btn-sm mt-2">
-                                                Edit
-                                            </a>
-
-                                            <a href="{{ path('app_task_delete', {'id': task.id}) }}"
-                                               class="btn btn-outline-danger btn-sm mt-2"
-                                               onclick="return confirm('Are you sure you want to delete this task?');">
-                                                Delete
-                                            </a>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
+                {% endfor %}
 
             </div>
 
@@ -214,4 +114,59 @@
     </div>
 
 </div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    let draggedTask = null;
+
+    document.querySelectorAll('.kanban-task').forEach(task => {
+        task.addEventListener('dragstart', function () {
+            draggedTask = this;
+            this.classList.add('opacity-50');
+        });
+
+        task.addEventListener('dragend', function () {
+            this.classList.remove('opacity-50');
+        });
+    });
+
+    document.querySelectorAll('.kanban-column').forEach(column => {
+        column.addEventListener('dragover', function (event) {
+            event.preventDefault();
+        });
+
+        column.addEventListener('drop', function () {
+            if (!draggedTask) {
+                return;
+            }
+
+            const taskId = draggedTask.dataset.taskId;
+            const newStatus = this.dataset.status;
+
+            this.appendChild(draggedTask);
+
+            fetch(`/tasks/${taskId}/status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    status: newStatus
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert('Could not update task status.');
+                    location.reload();
+                }
+            })
+            .catch(() => {
+                alert('Error updating task status.');
+                location.reload();
+            });
+        });
+    });
+</script>
 {% endblock %}

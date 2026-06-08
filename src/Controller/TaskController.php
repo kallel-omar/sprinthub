@@ -18,6 +18,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
+
 
 #[Route('/tasks')]
 final class TaskController extends AbstractController
@@ -292,4 +294,40 @@ final class TaskController extends AbstractController
 
         $entityManager->persist($log);
     }
+    #[Route('/{id}/status', name: 'app_task_update_status', methods: ['POST'])]
+    public function updateStatus(
+        Task $task,
+        Request $request,
+        EntityManagerInterface $entityManager
+    ): JsonResponse {
+        $data = json_decode($request->getContent(), true);
+
+        if (!isset($data['status'])) {
+            return new JsonResponse(['success' => false, 'error' => 'Missing status'], 400);
+        }
+
+        if (!in_array($data['status'], ['todo', 'in_progress', 'done'])) {
+            return new JsonResponse(['success' => false, 'error' => 'Invalid status'], 400);
+        }
+
+    $task->setStatus($data['status']);
+
+    $this->createActivityLog(
+        $entityManager,
+        'task_status_changed',
+        $this->getUser()->getFullName()
+        . ' moved task "'
+        . $task->getTitle()
+        . '" to '
+        . $data['status'],
+        $task
+    );
+
+    $entityManager->flush();
+
+    return new JsonResponse([
+        'success' => true,
+        'status' => $task->getStatus(),
+    ]);
+}
 }

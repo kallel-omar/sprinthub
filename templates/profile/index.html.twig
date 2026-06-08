@@ -1,0 +1,111 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block body %}
+<div class="container mt-5">
+
+    <h1 class="mb-4">👤 My Profile</h1>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body d-flex align-items-center gap-4">
+
+            <div>
+                {% if user.avatar %}
+                    <img src="{{ asset('uploads/avatars/' ~ user.avatar) }}"
+                         alt="Avatar"
+                         class="rounded-circle"
+                         style="width: 100px; height: 100px; object-fit: cover;">
+                {% else %}
+                    <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
+                         style="width: 100px; height: 100px; font-size: 40px;">
+                        {{ user.fullName|first|upper }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div>
+                <h4>{{ user.fullName }}</h4>
+
+                <p class="text-muted mb-1">
+                    {{ user.email }}
+                </p>
+
+                <p class="text-muted mb-0">
+                    Member since:
+                    {{ user.createdAt|date('d/m/Y') }}
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5>Upload Avatar</h5>
+
+            {{ form_start(avatarForm) }}
+                {{ form_widget(avatarForm) }}
+
+                <button class="btn btn-primary mt-2">
+                    Upload
+                </button>
+            {{ form_end(avatarForm) }}
+        </div>
+    </div>
+
+    <div class="row">
+
+        <div class="col-md-4 mb-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h5>Assigned Tasks</h5>
+                    <h2>{{ user.assignedTasks|length }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h5>Workspaces</h5>
+                    <h2>{{ user.workspaceMemberships|length }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h5>Unread Notifications</h5>
+                    <h2>{{ unreadNotifications }}</h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+
+            <h5 class="mb-3">My Assigned Tasks</h5>
+
+            {% for task in user.assignedTasks %}
+                <div class="border-bottom py-2">
+                    <strong>{{ task.title }}</strong>
+
+                    <span class="badge bg-secondary ms-2">
+                        {{ task.status }}
+                    </span>
+                </div>
+            {% else %}
+                <p class="text-muted">
+                    No assigned tasks.
+                </p>
+            {% endfor %}
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

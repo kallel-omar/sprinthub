@@ -19,8 +19,19 @@
 
         <div class="navbar-nav ms-auto">
             {% if app.user %}
-                <a class="nav-link" href="{{ path('app_dashboard') }}">Dashboard</a>
+                <a class="nav-link" href="{{ path('app_dashboard') }}">Dashboard</a>                                                                                          
                 <a class="nav-link" href="{{ path('app_workspace_index') }}">Workspaces</a>
+                <a class="nav-link d-flex align-items-center gap-2"
+                            href="{{ path('app_profile') }}">
+
+                                {% if app.user.avatar %}
+                                    <img src="{{ asset('uploads/avatars/' ~ app.user.avatar) }}"
+                                        class="rounded-circle"
+                                        style="width:32px;height:32px;object-fit:cover;">
+                                {% endif %}
+
+                                Profile
+                            </a>
 
                 <a class="nav-link position-relative" href="{{ path('app_notification_index') }}">
                     🔔

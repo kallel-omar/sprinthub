@@ -65,12 +65,25 @@
     </a>
 
     {% if currentRole in ['owner', 'admin'] %}
-        <a href="{{ path('app_project_delete', {'id': project.id}) }}"
-           class="btn btn-outline-danger btn-sm"
-           onclick="return confirm('Delete this project?')">
-            Delete
+    <div>
+
+        <a href="{{ path('app_project_new', {'id': workspace.id}) }}"
+           class="btn btn-primary">
+            Create Project
         </a>
-    {% endif %}
+
+        <a href="{{ path('app_workspace_members', {'id': workspace.id}) }}"
+           class="btn btn-outline-primary">
+            Members
+        </a>
+
+        <a href="{{ path('app_workspace_analytics', {'id': workspace.id}) }}"
+           class="btn btn-outline-success">
+            Analytics
+        </a>
+
+    </div>
+{% endif %}
 </div>
                         </div>
                     </div>

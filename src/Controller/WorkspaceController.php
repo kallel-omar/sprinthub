@@ -29,6 +29,57 @@ final class WorkspaceController extends AbstractController
         ]);
     }
 
+    #[Route('/{id}/analytics', name: 'app_workspace_analytics')]
+    public function analytics(Workspace $workspace): Response
+    {
+        $role = $this->getUserWorkspaceRole($workspace);
+
+        if (!$role) {
+            throw $this->createAccessDeniedException(
+                'You are not a member of this workspace.'
+            );
+        }
+
+        $totalProjects = count($workspace->getProjects());
+        $totalTasks = 0;
+        $todoTasks = 0;
+        $inProgressTasks = 0;
+        $doneTasks = 0;
+
+        foreach ($workspace->getProjects() as $project) {
+            foreach ($project->getTasks() as $task) {
+                $totalTasks++;
+
+                if ($task->getStatus() === 'todo') {
+                    $todoTasks++;
+                }
+
+                if ($task->getStatus() === 'in_progress') {
+                    $inProgressTasks++;
+                }
+
+                if ($task->getStatus() === 'done') {
+                    $doneTasks++;
+                }
+            }
+        }
+
+        $completionRate = $totalTasks > 0
+            ? round(($doneTasks / $totalTasks) * 100, 1)
+            : 0;
+
+        return $this->render('workspace/analytics.html.twig', [
+            'workspace' => $workspace,
+            'totalProjects' => $totalProjects,
+            'totalTasks' => $totalTasks,
+            'todoTasks' => $todoTasks,
+            'inProgressTasks' => $inProgressTasks,
+            'doneTasks' => $doneTasks,
+            'completionRate' => $completionRate,
+            'membersCount' => count($workspace->getMembers()),
+        ]);
+    }
+
     #[Route('/new', name: 'app_workspace_new')]
     public function new(Request $request, EntityManagerInterface $entityManager): Response
     {
