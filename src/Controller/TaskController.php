@@ -10,6 +10,7 @@ use App\Entity\TaskComment;
 use App\Form\TaskAttachmentType;
 use App\Form\TaskCommentType;
 use App\Form\TaskType;
+use App\Entity\Notification;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
@@ -40,6 +41,18 @@ final class TaskController extends AbstractController
                 $this->getUser()->getFullName() . ' created task "' . $task->getTitle() . '"',
                 $task
             );
+        if ($task->getAssignee()) {
+            $notification = new Notification();
+            $notification->setUser($task->getAssignee());
+            $notification->setMessage(
+                $this->getUser()->getFullName()
+                . ' assigned you to task "'
+                . $task->getTitle()
+                . '"'
+            );
+
+    $entityManager->persist($notification);
+}
 
             $entityManager->flush();
 

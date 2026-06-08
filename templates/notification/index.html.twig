@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block body %}
+<div class="container mt-5">
+
+    <h1 class="mb-4">🔔 Notifications</h1>
+
+    {% if notifications is empty %}
+        <div class="alert alert-info">
+            You have no notifications.
+        </div>
+    {% else %}
+        <div class="card shadow-sm">
+            <div class="card-body">
+
+                {% for notification in notifications %}
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-3">
+
+                        <div>
+                            {% if notification.isRead %}
+                                <span class="text-muted">
+                                    {{ notification.message }}
+                                </span>
+                            {% else %}
+                                <strong>
+                                    {{ notification.message }}
+                                </strong>
+
+                                <span class="badge bg-primary ms-2">
+                                    New
+                                </span>
+                            {% endif %}
+
+                            <small class="text-muted d-block">
+                                {{ notification.createdAt|date('d/m/Y H:i') }}
+                            </small>
+                        </div>
+
+                        {% if not notification.isRead %}
+                            <a href="{{ path('app_notification_read', {'id': notification.id}) }}"
+                               class="btn btn-sm btn-outline-success">
+                                Mark as read
+                            </a>
+                        {% endif %}
+
+                    </div>
+                {% endfor %}
+
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

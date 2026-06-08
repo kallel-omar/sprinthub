@@ -12,6 +12,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use App\Entity\TaskComment;
 use App\Entity\TaskAttachment;
 use App\Entity\WorkspaceMember;
+use App\Entity\Notification;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
@@ -67,6 +68,18 @@ private Collection $attachments;
 #[ORM\OneToMany(targetEntity: WorkspaceMember::class, mappedBy: 'user')]
 private Collection $workspaceMemberships;
 
+/**
+ * @var Collection<int, Workspace>
+ */
+#[ORM\OneToMany(targetEntity: Workspace::class, mappedBy: 'owner')]
+private Collection $workspaces;
+
+/**
+ * @var Collection<int, Notification>
+ */
+#[ORM\OneToMany(targetEntity: Notification::class, mappedBy: 'user')]
+private Collection $notifications;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -74,6 +87,8 @@ private Collection $workspaceMemberships;
          $this->comments = new ArrayCollection();
          $this->attachments = new ArrayCollection();
          $this->workspaceMemberships = new ArrayCollection();
+         $this->workspaces = new ArrayCollection();
+         $this->notifications = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -291,6 +306,65 @@ public function removeWorkspaceMembership(WorkspaceMember $workspaceMembership):
         // set the owning side to null (unless already changed)
         if ($workspaceMembership->getUser() === $this) {
             $workspaceMembership->setUser(null);
+        }
+    }
+
+    return $this;
+}
+
+/**
+ * @return Collection<int, Notification>
+ */
+public function getNotifications(): Collection
+{
+    return $this->notifications;
+}
+
+public function addNotification(Notification $notification): static
+{
+    if (!$this->notifications->contains($notification)) {
+        $this->notifications->add($notification);
+        $notification->setUser($this);
+    }
+
+    return $this;
+}
+
+public function removeNotification(Notification $notification): static
+{
+    if ($this->notifications->removeElement($notification)) {
+        // set the owning side to null (unless already changed)
+        if ($notification->getUser() === $this) {
+            $notification->setUser(null);
+        }
+    }
+
+    return $this;
+}
+
+/**
+ * @return Collection<int, Workspace>
+ */
+public function getWorkspaces(): Collection
+{
+    return $this->workspaces;
+}
+
+public function addWorkspace(Workspace $workspace): static
+{
+    if (!$this->workspaces->contains($workspace)) {
+        $this->workspaces->add($workspace);
+        $workspace->setOwner($this);
+    }
+
+    return $this;
+}
+
+public function removeWorkspace(Workspace $workspace): static
+{
+    if ($this->workspaces->removeElement($workspace)) {
+        if ($workspace->getOwner() === $this) {
+            $workspace->setOwner(null);
         }
     }
 
