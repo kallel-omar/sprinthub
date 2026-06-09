@@ -281,7 +281,7 @@ public function delete(
     if (count($workspace->getProjects()) > 0) {
         $this->addFlash(
             'danger',
-            'You cannot delete this workspace because it still has projects. Delete the projects first.'
+            'Delete the projects first before deleting this workspace.'
         );
 
         return $this->redirectToRoute('app_workspace_index');
@@ -297,8 +297,6 @@ public function delete(
 
     $entityManager->remove($workspace);
     $entityManager->flush();
-
-    $this->addFlash('success', 'Workspace deleted successfully.');
 
     return $this->redirectToRoute('app_workspace_index');
 }
