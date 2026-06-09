@@ -137,26 +137,26 @@ final class TaskController extends AbstractController
             'task' => $task,
         ]);
     }
+#[Route('/{id}/delete', name: 'app_task_delete')]
+public function delete(Task $task, EntityManagerInterface $entityManager): Response
+{
+    $projectId = $task->getProject()->getId();
 
-    #[Route('/{id}/delete', name: 'app_task_delete')]
-    public function delete(Task $task, EntityManagerInterface $entityManager): Response
-    {
-        $projectId = $task->getProject()->getId();
-
-        $this->createActivityLog(
-            $entityManager,
-            'task_deleted',
-            $this->getUserDisplayName() . ' deleted task "' . $task->getTitle() . '"',
-            $task
-        );
-
-        $entityManager->remove($task);
-        $entityManager->flush();
-
-        return $this->redirectToRoute('app_project_show', [
-            'id' => $projectId,
-        ]);
+    foreach ($task->getActivityLogs() as $activityLog) {
+        $entityManager->remove($activityLog);
     }
+
+    foreach ($task->getLabels() as $label) {
+        $task->removeLabel($label);
+    }
+
+    $entityManager->remove($task);
+    $entityManager->flush();
+
+    return $this->redirectToRoute('app_project_show', [
+        'id' => $projectId,
+    ]);
+}
 
     #[Route('/{id}', name: 'app_task_show')]
     public function show(

@@ -278,17 +278,28 @@ public function delete(
         );
     }
 
+    if (count($workspace->getProjects()) > 0) {
+        $this->addFlash(
+            'danger',
+            'You cannot delete this workspace because it still has projects. Delete the projects first.'
+        );
+
+        return $this->redirectToRoute('app_workspace_index');
+    }
+
+    foreach ($workspace->getInvitations() as $invitation) {
+        $entityManager->remove($invitation);
+    }
+
+    foreach ($workspace->getMembers() as $member) {
+        $entityManager->remove($member);
+    }
+
     $entityManager->remove($workspace);
     $entityManager->flush();
 
+    $this->addFlash('success', 'Workspace deleted successfully.');
+
     return $this->redirectToRoute('app_workspace_index');
 }
-
-    private function slugify(string $text): string
-    {
-        $text = strtolower(trim($text));
-        $text = preg_replace('/[^a-z0-9]+/', '-', $text);
-
-        return trim($text, '-');
-    }
 }
