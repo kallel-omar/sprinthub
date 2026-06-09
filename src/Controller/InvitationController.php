@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Entity\WorkspaceMember;
+use App\Entity\Notification;
 use App\Repository\WorkspaceInvitationRepository;
 use App\Repository\WorkspaceMemberRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -71,8 +72,38 @@ final class InvitationController extends AbstractController
         }
 
         $invitation->setStatus('accepted');
+        $notificationRepository = $entityManager->getRepository(Notification::class);
+
+            $receiverNotification = $notificationRepository->findOneBy([
+                'user' => $user,
+                'link' => $this->generateUrl('app_invitation_accept', [
+                    'token' => $invitation->getToken(),
+                ]),
+            ]);
+
+            if ($receiverNotification) {
+                $receiverNotification->setIsRead(true);
+            }
+
+        $invitedBy = $invitation->getInvitedBy();
+
+        if ($invitedBy) {
+            $notification = new Notification();
+            $notification->setUser($invitedBy);
+            $notification->setMessage(
+                $user->getFullName() .
+                ' accepted your invitation to workspace "' .
+                $invitation->getWorkspace()->getName() .
+                '".'
+            );
+
+            $entityManager->persist($notification);
+        }
 
         $entityManager->flush();
+        
+
+      
 
         $this->addFlash('success', 'You have successfully joined the workspace.');
 

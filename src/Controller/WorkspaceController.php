@@ -3,10 +3,12 @@
 namespace App\Controller;
 
 use App\Entity\Workspace;
+use App\Entity\User;
 use App\Entity\WorkspaceInvitation;
 use App\Entity\WorkspaceMember;
 use App\Form\WorkspaceInvitationType;
 use App\Form\WorkspaceMemberType;
+use App\Entity\Notification;
 use App\Form\WorkspaceType;
 use App\Repository\WorkspaceMemberRepository;
 use App\Repository\WorkspaceRepository;
@@ -15,23 +17,36 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 #[Route('/workspaces')]
 final class WorkspaceController extends AbstractController
 {
-    #[Route('', name: 'app_workspace_index')]
+   #[Route('', name: 'app_workspace_index')]
 public function index(): Response
 {
     $user = $this->getUser();
 
-    $workspaces = [];
+    if (!$user instanceof User) {
+        return $this->redirectToRoute('app_login');
+    }
+
+    $ownedWorkspaces = [];
+    $invitedWorkspaces = [];
 
     foreach ($user->getWorkspaceMemberships() as $membership) {
-        $workspaces[] = $membership->getWorkspace();
+        $workspace = $membership->getWorkspace();
+
+        if ($membership->getRole() === 'owner') {
+            $ownedWorkspaces[] = $workspace;
+        } else {
+            $invitedWorkspaces[] = $workspace;
+        }
     }
 
     return $this->render('workspace/index.html.twig', [
-        'workspaces' => $workspaces,
+        'ownedWorkspaces' => $ownedWorkspaces,
+        'invitedWorkspaces' => $invitedWorkspaces,
     ]);
 }
 
@@ -164,101 +179,111 @@ public function index(): Response
         ]);
     }
 
-    #[Route('/{id}/members', name: 'app_workspace_members')]
-    public function members(
-        Workspace $workspace,
-        Request $request,
-        EntityManagerInterface $entityManager,
-        WorkspaceMemberRepository $workspaceMemberRepository
-    ): Response {
-        $role = $this->getUserWorkspaceRole($workspace);
+   #[Route('/{id}/members', name: 'app_workspace_members')]
+public function members(
+    Workspace $workspace,
+    Request $request,
+    EntityManagerInterface $entityManager,
+    WorkspaceMemberRepository $workspaceMemberRepository
+): Response {
+    $role = $this->getUserWorkspaceRole($workspace);
 
-        if (!in_array($role, ['owner', 'admin'], true)) {
-            $this->addFlash('danger', 'You are not allowed to manage members.');
+    if (!in_array($role, ['owner', 'admin'], true)) {
+        $this->addFlash('danger', 'You are not allowed to manage members.');
 
-            return $this->redirectToRoute('app_workspace_show', [
-                'id' => $workspace->getId(),
-            ]);
-        }
+        return $this->redirectToRoute('app_workspace_show', [
+            'id' => $workspace->getId(),
+        ]);
+    }
 
-        $workspaceMember = new WorkspaceMember();
+    $inviteLink = null;
 
-        $form = $this->createForm(WorkspaceMemberType::class, $workspaceMember);
-        $form->handleRequest($request);
+    if ($request->isMethod('POST')) {
+        $email = strtolower(trim((string) $request->request->get('email')));
 
-        if ($form->isSubmitted() && $form->isValid()) {
-            $existingMember = $workspaceMemberRepository->findOneBy([
-                'workspace' => $workspace,
-                'user' => $workspaceMember->getUser(),
-            ]);
-
-            if ($existingMember) {
-                $this->addFlash('danger', 'This user is already a member of this workspace.');
-
-                return $this->redirectToRoute('app_workspace_members', [
-                    'id' => $workspace->getId(),
-                ]);
-            }
-
-            $workspaceMember->setWorkspace($workspace);
-
-            $entityManager->persist($workspaceMember);
-            $entityManager->flush();
-
-            $this->addFlash('success', 'Member added successfully.');
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->addFlash('danger', 'Please enter a valid email address.');
 
             return $this->redirectToRoute('app_workspace_members', [
                 'id' => $workspace->getId(),
             ]);
         }
 
-        return $this->render('workspace/members.html.twig', [
-            'workspace' => $workspace,
-            'form' => $form->createView(),
+        foreach ($workspace->getMembers() as $member) {
+            if (strtolower($member->getUser()->getEmail()) === $email) {
+                $this->addFlash('danger', 'This user is already a member of this workspace.');
+
+                return $this->redirectToRoute('app_workspace_members', [
+                    'id' => $workspace->getId(),
+                ]);
+            }
+        }
+
+        foreach ($workspace->getInvitations() as $existingInvitation) {
+            if (
+                strtolower($existingInvitation->getEmail()) === $email
+                && $existingInvitation->getStatus() === 'pending'
+            ) {
+                $this->addFlash('danger', 'A pending invitation already exists for this email.');
+
+                return $this->redirectToRoute('app_workspace_members', [
+                    'id' => $workspace->getId(),
+                ]);
+            }
+        }
+
+        $invitation = new WorkspaceInvitation();
+        $invitation->setWorkspace($workspace);
+        $invitation->setEmail($email);
+        $currentUser = $this->getUser();
+
+        if ($currentUser instanceof User) {
+            $invitation->setInvitedBy($currentUser);
+        }
+        $invitation->setToken(bin2hex(random_bytes(32)));
+        $invitation->setStatus('pending');
+        $invitation->setCreatedAt(new \DateTimeImmutable());
+        $invitation->setExpiresAt(new \DateTimeImmutable('+7 days'));
+
+        $entityManager->persist($invitation);
+
+        $inviteLink = $this->generateUrl('app_invitation_accept', [
+            'token' => $invitation->getToken(),
+        ], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        $invitedUser = $entityManager->getRepository(User::class)->findOneBy([
+            'email' => $email,
         ]);
-    }
-   #[Route('/members/{id}/role', name: 'app_workspace_member_role', methods: ['POST'])]
-public function updateMemberRole(
-    WorkspaceMember $member,
-    Request $request,
-    EntityManagerInterface $entityManager
-): Response {
-    $workspace = $member->getWorkspace();
-    $currentUserRole = $this->getUserWorkspaceRole($workspace);
 
-    if ($currentUserRole !== 'owner') {
-        $this->addFlash('danger', 'Only the owner can change member roles.');
+        if ($invitedUser) {
+            $notification = new Notification();
+            $notification->setUser($invitedUser);
+            $user = $this->getUser();
 
-        return $this->redirectToRoute('app_workspace_members', [
-            'id' => $workspace->getId(),
-        ]);
-    }
+        $senderName = $user instanceof User
+            ? $user->getFullName()
+            : 'Someone';
 
-    if ($member->getRole() === 'owner') {
-        $this->addFlash('danger', 'Owner role cannot be changed.');
+        $notification->setMessage(
+            $senderName . ' invited you to join workspace "' . $workspace->getName() . '".'
+        );
+        $notification->setLink(
+            $this->generateUrl('app_invitation_accept', [
+                'token' => $invitation->getToken(),
+            ])
+        );
 
-        return $this->redirectToRoute('app_workspace_members', [
-            'id' => $workspace->getId(),
-        ]);
-    }
+            $entityManager->persist($notification);
+        }
 
-    $newRole = $request->request->get('role');
+        $entityManager->flush();
 
-    if (!in_array($newRole, ['admin', 'member'], true)) {
-        $this->addFlash('danger', 'Invalid role selected.');
-
-        return $this->redirectToRoute('app_workspace_members', [
-            'id' => $workspace->getId(),
-        ]);
+        $this->addFlash('success', 'Invitation link generated successfully.');
     }
 
-    $member->setRole($newRole);
-    $entityManager->flush();
-
-    $this->addFlash('success', 'Member role updated successfully.');
-
-    return $this->redirectToRoute('app_workspace_members', [
-        'id' => $workspace->getId(),
+    return $this->render('workspace/members.html.twig', [
+        'workspace' => $workspace,
+        'inviteLink' => $inviteLink,
     ]);
 }
 
@@ -309,6 +334,74 @@ public function removeMember(
         'id' => $workspace->getId(),
     ]);
 }
+    #[Route('/members/{id}/role', name: 'app_workspace_member_role', methods: ['POST'])]
+    public function changeMemberRole(
+        WorkspaceMember $member,
+        Request $request,
+        EntityManagerInterface $entityManager
+    ): Response {
+        $workspace = $member->getWorkspace();
+        $currentUserRole = $this->getUserWorkspaceRole($workspace);
+
+        if ($currentUserRole !== 'owner') {
+            $this->addFlash('danger', 'Only the owner can change member roles.');
+
+            return $this->redirectToRoute('app_workspace_members', [
+                'id' => $workspace->getId(),
+            ]);
+        }
+
+        if ($member->getRole() === 'owner') {
+            $this->addFlash('danger', 'Owner role cannot be changed.');
+
+            return $this->redirectToRoute('app_workspace_members', [
+                'id' => $workspace->getId(),
+            ]);
+        }
+
+        $newRole = $request->request->get('role');
+
+        if (!in_array($newRole, ['admin', 'member'], true)) {
+            $this->addFlash('danger', 'Invalid role selected.');
+
+            return $this->redirectToRoute('app_workspace_members', [
+                'id' => $workspace->getId(),
+            ]);
+        }
+
+        if ($member->getRole() === $newRole) {
+            $this->addFlash('info', 'Role is already the same.');
+
+            return $this->redirectToRoute('app_workspace_members', [
+                'id' => $workspace->getId(),
+            ]);
+        }
+
+        $oldRole = $member->getRole();
+
+$member->setRole($newRole);
+
+$notification = new Notification();
+$notification->setUser($member->getUser());
+$notification->setMessage(
+    'Your role in workspace "' .
+    $workspace->getName() .
+    '" has been changed from ' .
+    ucfirst($oldRole) .
+    ' to ' .
+    ucfirst($newRole) .
+    '.'
+);
+
+$entityManager->persist($notification);
+        $entityManager->flush();
+
+        $this->addFlash('success', 'Member role updated successfully.');
+
+        return $this->redirectToRoute('app_workspace_members', [
+            'id' => $workspace->getId(),
+        ]);
+    }
 
     #[Route('/{id}/delete', name: 'app_workspace_delete')]
     public function delete(
@@ -378,4 +471,20 @@ public function removeMember(
 
         return $text ?: 'workspace';
     }
+    #[Route('/invitation/{id}/delete', name: 'app_workspace_invitation_delete')]
+public function deleteInvitation(
+    WorkspaceInvitation $invitation,
+    EntityManagerInterface $entityManager
+): Response {
+    $workspace = $invitation->getWorkspace();
+
+    $entityManager->remove($invitation);
+    $entityManager->flush();
+
+    $this->addFlash('success', 'Invitation deleted successfully.');
+
+    return $this->redirectToRoute('app_workspace_members', [
+        'id' => $workspace->getId(),
+    ]);
+}
 }

@@ -39,10 +39,38 @@
                         </div>
 
                         {% if not notification.isRead %}
-                            <a href="{{ path('app_notification_read', {'id': notification.id}) }}"
-                               class="btn btn-sm btn-outline-success">
-                                Mark as read
-                            </a>
+
+                            {# Invitation notification #}
+                            {% if notification.link and 'invite/accept' in notification.link %}
+                                <div class="d-flex gap-2">
+
+                                    <a href="{{ notification.link }}"
+                                       class="btn btn-sm btn-success">
+                                        Accept
+                                    </a>
+
+                                    <a href="{{ path('app_notification_decline', {'id': notification.id}) }}"
+                                       class="btn btn-sm btn-danger">
+                                        Decline
+                                    </a>
+
+                                </div>
+
+                            {# Task notification or any notification with link #}
+                            {% elseif notification.link %}
+                                <a href="{{ path('app_notification_open', {'id': notification.id}) }}"
+       class="btn btn-sm btn-outline-primary">
+        Open
+                                </a>
+
+                            {# Regular notification #}
+                            {% else %}
+                                <a href="{{ path('app_notification_read', {'id': notification.id}) }}"
+                                   class="btn btn-sm btn-outline-success">
+                                    Mark as read
+                                </a>
+                            {% endif %}
+
                         {% endif %}
 
                     </div>

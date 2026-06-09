@@ -15,6 +15,8 @@ class Notification
 
     #[ORM\Column(length: 255)]
     private ?string $message = null;
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $link = null;
 
     #[ORM\Column]
     private ?bool $isRead = null;
@@ -25,6 +27,8 @@ class Notification
     #[ORM\ManyToOne(inversedBy: 'notifications')]
     #[ORM\JoinColumn(nullable: false)]
     private ?User $user = null;
+
+    
 
     public function __construct()
     {
@@ -84,4 +88,18 @@ class Notification
 
         return $this;
     }
+
+    public function getLink(): ?string
+    {
+        return $this->link;
+    }
+
+    public function setLink(?string $link): static
+    {
+        $this->link = $link;
+
+        return $this;
+    }
+
+    
 }

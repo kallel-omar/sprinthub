@@ -32,8 +32,9 @@ final class TaskController extends AbstractController
         $task = new Task();
 
         $form = $this->createForm(TaskType::class, $task, [
-             'project_members' => $project->getMembers()->toArray(),
+            'project_members' => $project->getMembers()->toArray(),
         ]);
+
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -53,6 +54,11 @@ final class TaskController extends AbstractController
                 $notification->setUser($task->getAssignee());
                 $notification->setMessage(
                     $this->getUserDisplayName() . ' assigned you to task "' . $task->getTitle() . '"'
+                );
+                $notification->setLink(
+                    $this->generateUrl('app_task_show', [
+                        'id' => $task->getId(),
+                    ])
                 );
 
                 $entityManager->persist($notification);
@@ -116,45 +122,64 @@ final class TaskController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_task_edit')]
-public function edit(Task $task, Request $request, EntityManagerInterface $entityManager): Response
-{
-    $project = $task->getProject();
+    public function edit(Task $task, Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $project = $task->getProject();
 
-    if (!$project) {
-        $this->addFlash('danger', 'This task is not linked to any project.');
-        return $this->redirectToRoute('app_project_index');
-    }
+        if (!$project) {
+            $this->addFlash('danger', 'This task is not linked to any project.');
+            return $this->redirectToRoute('app_project_index');
+        }
 
-    $form = $this->createForm(TaskType::class, $task, [
-        'project_members' => $project->getMembers()->toArray(),
-    ]);
+        $oldAssignee = $task->getAssignee();
 
-    $form->handleRequest($request);
+        $form = $this->createForm(TaskType::class, $task, [
+            'project_members' => $project->getMembers()->toArray(),
+        ]);
 
-    if ($form->isSubmitted() && $form->isValid()) {
-        $task->setUpdatedAt(new \DateTimeImmutable());
+        $form->handleRequest($request);
 
-        $this->createActivityLog(
-            $entityManager,
-            'task_updated',
-            $this->getUserDisplayName() . ' updated task "' . $task->getTitle() . '"',
-            $task
-        );
+        if ($form->isSubmitted() && $form->isValid()) {
+            $task->setUpdatedAt(new \DateTimeImmutable());
 
-        $entityManager->flush();
+            $newAssignee = $task->getAssignee();
 
-        $this->addFlash('success', 'Task updated successfully.');
+            if ($newAssignee && $newAssignee !== $oldAssignee) {
+                $notification = new Notification();
+                $notification->setUser($newAssignee);
+                $notification->setMessage(
+                    $this->getUserDisplayName() . ' assigned you to task "' . $task->getTitle() . '".'
+                );
+                $notification->setLink(
+                    $this->generateUrl('app_task_show', [
+                        'id' => $task->getId(),
+                    ])
+                );
 
-        return $this->redirectToRoute('app_project_show', [
-            'id' => $project->getId(),
+                $entityManager->persist($notification);
+            }
+
+            $this->createActivityLog(
+                $entityManager,
+                'task_updated',
+                $this->getUserDisplayName() . ' updated task "' . $task->getTitle() . '"',
+                $task
+            );
+
+            $entityManager->flush();
+
+            $this->addFlash('success', 'Task updated successfully.');
+
+            return $this->redirectToRoute('app_project_show', [
+                'id' => $project->getId(),
+            ]);
+        }
+
+        return $this->render('task/edit.html.twig', [
+            'form' => $form,
+            'task' => $task,
         ]);
     }
-
-    return $this->render('task/edit.html.twig', [
-        'form' => $form,
-        'task' => $task,
-    ]);
-}
 
     #[Route('/{id}/delete', name: 'app_task_delete')]
     public function delete(Task $task, EntityManagerInterface $entityManager): Response
@@ -202,6 +227,31 @@ public function edit(Task $task, Request $request, EntityManagerInterface $entit
                 $this->getUserDisplayName() . ' commented on task "' . $task->getTitle() . '"',
                 $task
             );
+
+            $currentUser = $this->getUser();
+
+                foreach ($task->getProject()->getMembers() as $projectMember) {
+                    if (!$projectMember instanceof User) {
+                        continue;
+                    }
+
+                    if ($currentUser instanceof User && $projectMember->getId() === $currentUser->getId()) {
+                        continue;
+                    }
+
+                    $notification = new Notification();
+                    $notification->setUser($projectMember);
+                    $notification->setMessage(
+                        $this->getUserDisplayName() . ' commented on task "' . $task->getTitle() . '".'
+                    );
+                    $notification->setLink(
+                        $this->generateUrl('app_task_show', [
+                            'id' => $task->getId(),
+                        ])
+                    );
+
+                    $entityManager->persist($notification);
+                }
 
             $entityManager->flush();
 

@@ -32,6 +32,10 @@ class WorkspaceInvitation
     #[ORM\JoinColumn(nullable: false)]
     private ?Workspace $workspace = null;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?User $invitedBy = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -105,6 +109,18 @@ class WorkspaceInvitation
     public function setWorkspace(?Workspace $workspace): static
     {
         $this->workspace = $workspace;
+
+        return $this;
+    }
+    
+    public function getInvitedBy(): ?User
+    {
+        return $this->invitedBy;
+    }
+
+    public function setInvitedBy(?User $invitedBy): static
+    {
+        $this->invitedBy = $invitedBy;
 
         return $this;
     }
