@@ -80,6 +80,12 @@ private Collection $workspaces;
 #[ORM\OneToMany(targetEntity: Notification::class, mappedBy: 'user')]
 private Collection $notifications;
 
+/**
+ * @var Collection<int, Project>
+ */
+#[ORM\ManyToMany(targetEntity: Project::class, mappedBy: 'members')]
+private Collection $memberProjects;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -89,6 +95,7 @@ private Collection $notifications;
          $this->workspaceMemberships = new ArrayCollection();
          $this->workspaces = new ArrayCollection();
          $this->notifications = new ArrayCollection();
+         $this->memberProjects = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -370,4 +377,32 @@ public function removeWorkspace(Workspace $workspace): static
 
     return $this;
 }
+
+/**
+ * @return Collection<int, Project>
+ */
+public function getMemberProjects(): Collection
+{
+    return $this->memberProjects;
+}
+
+public function addMemberProject(Project $memberProject): static
+{
+    if (!$this->memberProjects->contains($memberProject)) {
+        $this->memberProjects->add($memberProject);
+        $memberProject->addMember($this);
+    }
+
+    return $this;
+}
+
+public function removeMemberProject(Project $memberProject): static
+{
+    if ($this->memberProjects->removeElement($memberProject)) {
+        $memberProject->removeMember($this);
+    }
+
+    return $this;
+}
+
 }

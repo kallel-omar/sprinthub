@@ -7,6 +7,8 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints\Length;
+use Symfony\Component\Validator\Constraints\NotBlank;
 
 class TaskCommentType extends AbstractType
 {
@@ -19,6 +21,17 @@ class TaskCommentType extends AbstractType
                     'class' => 'form-control',
                     'placeholder' => 'Write a comment...',
                     'rows' => 3,
+                ],
+                'constraints' => [
+                    new NotBlank([
+                        'message' => 'Comment cannot be empty.',
+                    ]),
+                    new Length([
+                        'min' => 2,
+                        'minMessage' => 'Comment must be at least {{ limit }} characters.',
+                        'max' => 1000,
+                        'maxMessage' => 'Comment cannot exceed {{ limit }} characters.',
+                    ]),
                 ],
             ]);
     }

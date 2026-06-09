@@ -47,11 +47,20 @@ class Project
     #[ORM\OneToMany(targetEntity: ActivityLog::class, mappedBy: 'project')]
     private Collection $activityLogs;
 
+
+    /**
+     * @var Collection<int, User>
+     */
+    #[ORM\ManyToMany(targetEntity: User::class, inversedBy: 'memberProjects')]
+    #[ORM\JoinTable(name: 'project_members')]
+    private Collection $members;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
         $this->tasks = new ArrayCollection();
         $this->activityLogs = new ArrayCollection();
+        $this->members = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -190,4 +199,30 @@ class Project
 
         return $this;
     }
+
+
+
+    /**
+ * @return Collection<int, User>
+ */
+        public function getMembers(): Collection
+        {
+            return $this->members;
+        }
+
+        public function addMember(User $member): static
+        {
+            if (!$this->members->contains($member)) {
+                $this->members->add($member);
+            }
+
+            return $this;
+        }
+
+        public function removeMember(User $member): static
+        {
+            $this->members->removeElement($member);
+
+            return $this;
+        }
 }

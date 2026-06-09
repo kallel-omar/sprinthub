@@ -7,6 +7,8 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints\File;
+use Symfony\Component\Validator\Constraints\NotNull;
 
 class AvatarType extends AbstractType
 {
@@ -16,6 +18,21 @@ class AvatarType extends AbstractType
             'mapped' => false,
             'required' => true,
             'label' => 'Upload Avatar',
+            'constraints' => [
+                new NotNull([
+                    'message' => 'Please select an image.',
+                ]),
+                new File([
+                    'maxSize' => '5M',
+                    'maxSizeMessage' => 'Image size cannot exceed 5 MB.',
+                    'mimeTypes' => [
+                        'image/jpeg',
+                        'image/png',
+                        'image/webp',
+                    ],
+                    'mimeTypesMessage' => 'Please upload a valid image (JPG, PNG or WEBP).',
+                ]),
+            ],
         ]);
     }
 

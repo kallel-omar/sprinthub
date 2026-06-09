@@ -22,7 +22,7 @@ class WorkspaceMember
     private ?User $user = null;
 
     #[ORM\Column(length: 50)]
-    private ?string $role = null;
+    private ?string $role = 'member';
 
     public function getId(): ?int
     {

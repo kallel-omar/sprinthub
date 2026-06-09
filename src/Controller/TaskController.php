@@ -9,6 +9,7 @@ use App\Entity\Task;
 use App\Entity\TaskAttachment;
 use App\Entity\TaskChecklistItem;
 use App\Entity\TaskComment;
+use App\Entity\User;
 use App\Form\TaskAttachmentType;
 use App\Form\TaskChecklistItemType;
 use App\Form\TaskCommentType;
@@ -30,7 +31,9 @@ final class TaskController extends AbstractController
     {
         $task = new Task();
 
-        $form = $this->createForm(TaskType::class, $task);
+        $form = $this->createForm(TaskType::class, $task, [
+             'project_members' => $project->getMembers()->toArray(),
+        ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -49,16 +52,15 @@ final class TaskController extends AbstractController
                 $notification = new Notification();
                 $notification->setUser($task->getAssignee());
                 $notification->setMessage(
-                    $this->getUserDisplayName()
-                    . ' assigned you to task "'
-                    . $task->getTitle()
-                    . '"'
+                    $this->getUserDisplayName() . ' assigned you to task "' . $task->getTitle() . '"'
                 );
 
                 $entityManager->persist($notification);
             }
 
             $entityManager->flush();
+
+            $this->addFlash('success', 'Task created successfully.');
 
             return $this->redirectToRoute('app_project_show', [
                 'id' => $project->getId(),
@@ -85,6 +87,8 @@ final class TaskController extends AbstractController
 
         $entityManager->flush();
 
+        $this->addFlash('success', 'Task moved to In Progress.');
+
         return $this->redirectToRoute('app_project_show', [
             'id' => $task->getProject()->getId(),
         ]);
@@ -104,59 +108,76 @@ final class TaskController extends AbstractController
 
         $entityManager->flush();
 
+        $this->addFlash('success', 'Task marked as done.');
+
         return $this->redirectToRoute('app_project_show', [
             'id' => $task->getProject()->getId(),
         ]);
     }
 
     #[Route('/{id}/edit', name: 'app_task_edit')]
-    public function edit(Task $task, Request $request, EntityManagerInterface $entityManager): Response
-    {
-        $form = $this->createForm(TaskType::class, $task);
-        $form->handleRequest($request);
+public function edit(Task $task, Request $request, EntityManagerInterface $entityManager): Response
+{
+    $project = $task->getProject();
 
-        if ($form->isSubmitted() && $form->isValid()) {
-            $task->setUpdatedAt(new \DateTimeImmutable());
+    if (!$project) {
+        $this->addFlash('danger', 'This task is not linked to any project.');
+        return $this->redirectToRoute('app_project_index');
+    }
 
-            $this->createActivityLog(
-                $entityManager,
-                'task_updated',
-                $this->getUserDisplayName() . ' updated task "' . $task->getTitle() . '"',
-                $task
-            );
+    $form = $this->createForm(TaskType::class, $task, [
+        'project_members' => $project->getMembers()->toArray(),
+    ]);
 
-            $entityManager->flush();
+    $form->handleRequest($request);
 
-            return $this->redirectToRoute('app_project_show', [
-                'id' => $task->getProject()->getId(),
-            ]);
-        }
+    if ($form->isSubmitted() && $form->isValid()) {
+        $task->setUpdatedAt(new \DateTimeImmutable());
 
-        return $this->render('task/edit.html.twig', [
-            'form' => $form,
-            'task' => $task,
+        $this->createActivityLog(
+            $entityManager,
+            'task_updated',
+            $this->getUserDisplayName() . ' updated task "' . $task->getTitle() . '"',
+            $task
+        );
+
+        $entityManager->flush();
+
+        $this->addFlash('success', 'Task updated successfully.');
+
+        return $this->redirectToRoute('app_project_show', [
+            'id' => $project->getId(),
         ]);
     }
-#[Route('/{id}/delete', name: 'app_task_delete')]
-public function delete(Task $task, EntityManagerInterface $entityManager): Response
-{
-    $projectId = $task->getProject()->getId();
 
-    foreach ($task->getActivityLogs() as $activityLog) {
-        $entityManager->remove($activityLog);
-    }
-
-    foreach ($task->getLabels() as $label) {
-        $task->removeLabel($label);
-    }
-
-    $entityManager->remove($task);
-    $entityManager->flush();
-
-    return $this->redirectToRoute('app_project_show', [
-        'id' => $projectId,
+    return $this->render('task/edit.html.twig', [
+        'form' => $form,
+        'task' => $task,
     ]);
 }
+
+    #[Route('/{id}/delete', name: 'app_task_delete')]
+    public function delete(Task $task, EntityManagerInterface $entityManager): Response
+    {
+        $projectId = $task->getProject()->getId();
+
+        foreach ($task->getActivityLogs() as $activityLog) {
+            $entityManager->remove($activityLog);
+        }
+
+        foreach ($task->getLabels() as $label) {
+            $task->removeLabel($label);
+        }
+
+        $entityManager->remove($task);
+        $entityManager->flush();
+
+        $this->addFlash('success', 'Task deleted successfully.');
+
+        return $this->redirectToRoute('app_project_show', [
+            'id' => $projectId,
+        ]);
+    }
 
     #[Route('/{id}', name: 'app_task_show')]
     public function show(
@@ -184,6 +205,8 @@ public function delete(Task $task, EntityManagerInterface $entityManager): Respo
 
             $entityManager->flush();
 
+            $this->addFlash('success', 'Comment added successfully.');
+
             return $this->redirectToRoute('app_task_show', [
                 'id' => $task->getId(),
             ]);
@@ -205,16 +228,13 @@ public function delete(Task $task, EntityManagerInterface $entityManager): Respo
             $this->createActivityLog(
                 $entityManager,
                 'checklist_added',
-                $this->getUserDisplayName()
-                . ' added checklist item "'
-                . $checklistItem->getContent()
-                . '" to task "'
-                . $task->getTitle()
-                . '"',
+                $this->getUserDisplayName() . ' added checklist item "' . $checklistItem->getContent() . '" to task "' . $task->getTitle() . '"',
                 $task
             );
 
             $entityManager->flush();
+
+            $this->addFlash('success', 'Checklist item added successfully.');
 
             return $this->redirectToRoute('app_task_show', [
                 'id' => $task->getId(),
@@ -257,16 +277,13 @@ public function delete(Task $task, EntityManagerInterface $entityManager): Respo
                 $this->createActivityLog(
                     $entityManager,
                     'attachment_uploaded',
-                    $this->getUserDisplayName()
-                    . ' uploaded file "'
-                    . $originalName
-                    . '" to task "'
-                    . $task->getTitle()
-                    . '"',
+                    $this->getUserDisplayName() . ' uploaded file "' . $originalName . '" to task "' . $task->getTitle() . '"',
                     $task
                 );
 
                 $entityManager->flush();
+
+                $this->addFlash('success', 'File uploaded successfully.');
             }
 
             return $this->redirectToRoute('app_task_show', [
@@ -287,12 +304,15 @@ public function delete(Task $task, EntityManagerInterface $entityManager): Respo
         TaskAttachment $attachment,
         EntityManagerInterface $entityManager
     ): Response {
+        if ($attachment->getUploadedBy() !== $this->getUser()) {
+            throw $this->createAccessDeniedException('You cannot delete this attachment.');
+        }
+
         $task = $attachment->getTask();
         $taskId = $task->getId();
         $originalName = $attachment->getOriginalName();
 
-        $filePath = $this->getParameter('task_attachments_directory')
-            . '/' . $attachment->getFileName();
+        $filePath = $this->getParameter('task_attachments_directory') . '/' . $attachment->getFileName();
 
         if (file_exists($filePath)) {
             unlink($filePath);
@@ -301,17 +321,14 @@ public function delete(Task $task, EntityManagerInterface $entityManager): Respo
         $this->createActivityLog(
             $entityManager,
             'file_deleted',
-            $this->getUserDisplayName()
-            . ' deleted file "'
-            . $originalName
-            . '" from task "'
-            . $task->getTitle()
-            . '"',
+            $this->getUserDisplayName() . ' deleted file "' . $originalName . '" from task "' . $task->getTitle() . '"',
             $task
         );
 
         $entityManager->remove($attachment);
         $entityManager->flush();
+
+        $this->addFlash('success', 'File deleted successfully.');
 
         return $this->redirectToRoute('app_task_show', [
             'id' => $taskId,
@@ -330,7 +347,7 @@ public function delete(Task $task, EntityManagerInterface $entityManager): Respo
             return new JsonResponse(['success' => false, 'error' => 'Missing status'], 400);
         }
 
-        if (!in_array($data['status'], ['todo', 'in_progress', 'done'])) {
+        if (!in_array($data['status'], ['todo', 'in_progress', 'done'], true)) {
             return new JsonResponse(['success' => false, 'error' => 'Invalid status'], 400);
         }
 
@@ -339,11 +356,7 @@ public function delete(Task $task, EntityManagerInterface $entityManager): Respo
         $this->createActivityLog(
             $entityManager,
             'task_status_changed',
-            $this->getUserDisplayName()
-            . ' moved task "'
-            . $task->getTitle()
-            . '" to '
-            . $data['status'],
+            $this->getUserDisplayName() . ' moved task "' . $task->getTitle() . '" to ' . $data['status'],
             $task
         );
 
@@ -365,14 +378,13 @@ public function delete(Task $task, EntityManagerInterface $entityManager): Respo
         $this->createActivityLog(
             $entityManager,
             'checklist_toggled',
-            $this->getUserDisplayName()
-            . ' updated checklist item "'
-            . $item->getContent()
-            . '"',
+            $this->getUserDisplayName() . ' updated checklist item "' . $item->getContent() . '"',
             $item->getTask()
         );
 
         $entityManager->flush();
+
+        $this->addFlash('success', 'Checklist item updated.');
 
         return $this->redirectToRoute('app_task_show', [
             'id' => $item->getTask()->getId(),
@@ -391,15 +403,43 @@ public function delete(Task $task, EntityManagerInterface $entityManager): Respo
         $this->createActivityLog(
             $entityManager,
             'checklist_deleted',
-            $this->getUserDisplayName()
-            . ' deleted checklist item "'
-            . $content
-            . '"',
+            $this->getUserDisplayName() . ' deleted checklist item "' . $content . '"',
             $task
         );
 
         $entityManager->remove($item);
         $entityManager->flush();
+
+        $this->addFlash('success', 'Checklist item deleted successfully.');
+
+        return $this->redirectToRoute('app_task_show', [
+            'id' => $taskId,
+        ]);
+    }
+
+    #[Route('/comment/{id}/delete', name: 'app_comment_delete')]
+    public function deleteComment(
+        TaskComment $comment,
+        EntityManagerInterface $entityManager
+    ): Response {
+        if ($comment->getUser() !== $this->getUser()) {
+            throw $this->createAccessDeniedException('You cannot delete this comment.');
+        }
+
+        $task = $comment->getTask();
+        $taskId = $task->getId();
+
+        $this->createActivityLog(
+            $entityManager,
+            'comment_deleted',
+            $this->getUserDisplayName() . ' deleted a comment from task "' . $task->getTitle() . '"',
+            $task
+        );
+
+        $entityManager->remove($comment);
+        $entityManager->flush();
+
+        $this->addFlash('success', 'Comment deleted successfully.');
 
         return $this->redirectToRoute('app_task_show', [
             'id' => $taskId,
@@ -426,6 +466,12 @@ public function delete(Task $task, EntityManagerInterface $entityManager): Respo
 
     private function getUserDisplayName(): string
     {
-        return ucfirst($this->getUser()->getFullName());
+        $user = $this->getUser();
+
+        if (!$user instanceof User) {
+            return 'Someone';
+        }
+
+        return ucfirst($user->getFullName() ?? 'Someone');
     }
 }

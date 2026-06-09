@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\User;
 use App\Form\AvatarType;
 use App\Repository\NotificationRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -21,8 +22,13 @@ final class ProfileController extends AbstractController
         EntityManagerInterface $entityManager,
         SluggerInterface $slugger
     ): Response {
-        /** @var \App\Entity\User $user */
         $user = $this->getUser();
+
+        if (!$user instanceof User) {
+            $this->addFlash('danger', 'You must be logged in to access your profile.');
+
+            return $this->redirectToRoute('app_login');
+        }
 
         $form = $this->createForm(AvatarType::class, $user);
         $form->handleRequest($request);
@@ -38,12 +44,7 @@ final class ProfileController extends AbstractController
 
                 $safeFilename = $slugger->slug($originalFilename);
 
-                $newFilename =
-                    $safeFilename
-                    . '-'
-                    . uniqid()
-                    . '.'
-                    . $avatarFile->guessExtension();
+                $newFilename = $safeFilename . '-' . uniqid() . '.' . $avatarFile->guessExtension();
 
                 try {
                     $avatarFile->move(
@@ -51,17 +52,24 @@ final class ProfileController extends AbstractController
                         $newFilename
                     );
                 } catch (FileException $e) {
-                    $this->addFlash('danger', 'Upload failed.');
+                    $this->addFlash('danger', 'Avatar upload failed.');
 
                     return $this->redirectToRoute('app_profile');
                 }
 
                 $user->setAvatar($newFilename);
+                $user->setUpdatedAt(new \DateTimeImmutable());
 
                 $entityManager->flush();
 
+                $this->addFlash('success', 'Avatar updated successfully.');
+
                 return $this->redirectToRoute('app_profile');
             }
+
+            $this->addFlash('warning', 'Please choose an image before uploading.');
+
+            return $this->redirectToRoute('app_profile');
         }
 
         $unreadNotifications = $notificationRepository->count([

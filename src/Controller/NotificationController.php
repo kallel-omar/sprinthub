@@ -42,11 +42,15 @@ final class NotificationController extends AbstractController
         EntityManagerInterface $entityManager
     ): Response {
         if ($notification->getUser() !== $this->getUser()) {
-            throw $this->createAccessDeniedException();
+            $this->addFlash('danger', 'You are not allowed to access this notification.');
+
+            return $this->redirectToRoute('app_notification_index');
         }
 
         $notification->setIsRead(true);
         $entityManager->flush();
+
+        $this->addFlash('success', 'Notification marked as read.');
 
         return $this->redirectToRoute('app_notification_index');
     }

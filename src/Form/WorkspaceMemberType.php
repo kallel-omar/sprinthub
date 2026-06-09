@@ -9,6 +9,7 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints\NotBlank;
 
 class WorkspaceMemberType extends AbstractType
 {
@@ -18,11 +19,23 @@ class WorkspaceMemberType extends AbstractType
             ->add('user', EntityType::class, [
                 'class' => User::class,
                 'choice_label' => 'fullName',
+                'placeholder' => 'Select a user',
+                'constraints' => [
+                    new NotBlank([
+                        'message' => 'Please select a user.',
+                    ]),
+                ],
             ])
             ->add('role', ChoiceType::class, [
                 'choices' => [
                     'Member' => 'member',
                     'Admin' => 'admin',
+                ],
+                'data' => 'member',
+                'constraints' => [
+                    new NotBlank([
+                        'message' => 'Please select a role.',
+                    ]),
                 ],
             ]);
     }

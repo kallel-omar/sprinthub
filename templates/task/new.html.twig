@@ -10,39 +10,83 @@
         ← Back to Project
     </a>
 
-    <h1>Create Task</h1>
-
-    <p class="text-muted">
-        Project: {{ project.name }}
-    </p>
-
     <div class="card shadow-sm">
         <div class="card-body">
+
+            <h1 class="mb-3">Create Task</h1>
+
+            <p class="text-muted">
+                Project: {{ project.name }}
+            </p>
 
             {{ form_start(form) }}
 
                 <div class="mb-3">
-                    {{ form_row(form.title) }}
+                    {{ form_label(form.title) }}
+                    {{ form_widget(form.title, {
+                        attr: {
+                            class: 'form-control'
+                        }
+                    }) }}
+                    <div class="text-danger small mt-1">
+                        {{ form_errors(form.title) }}
+                    </div>
                 </div>
 
                 <div class="mb-3">
-                    {{ form_row(form.description) }}
+                    {{ form_label(form.description) }}
+                    {{ form_widget(form.description, {
+                        attr: {
+                            class: 'form-control'
+                        }
+                    }) }}
+                    <div class="text-danger small mt-1">
+                        {{ form_errors(form.description) }}
+                    </div>
                 </div>
 
                 <div class="mb-3">
-                    {{ form_row(form.priority) }}
+                    {{ form_label(form.priority) }}
+                    {{ form_widget(form.priority, {
+                        attr: {
+                            class: 'form-select'
+                        }
+                    }) }}
+                    <div class="text-danger small mt-1">
+                        {{ form_errors(form.priority) }}
+                    </div>
                 </div>
 
                 <div class="mb-3">
-                    {{ form_row(form.dueDate) }}
+                    {{ form_label(form.dueDate) }}
+                    {{ form_widget(form.dueDate, {
+                        attr: {
+                            class: 'form-control'
+                        }
+                    }) }}
+                    <div class="text-danger small mt-1">
+                        {{ form_errors(form.dueDate) }}
+                    </div>
                 </div>
 
                 <div class="mb-3">
-                    {{ form_row(form.assignee) }}
+                    {{ form_label(form.assignee) }}
+                    {{ form_widget(form.assignee, {
+                        attr: {
+                            class: 'form-select'
+                        }
+                    }) }}
+                    <div class="text-danger small mt-1">
+                        {{ form_errors(form.assignee) }}
+                    </div>
                 </div>
 
                 <div class="mb-3">
-                    {{ form_row(form.labels) }}
+                    {{ form_label(form.labels) }}
+                    {{ form_widget(form.labels) }}
+                    <div class="text-danger small mt-1">
+                        {{ form_errors(form.labels) }}
+                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-primary">

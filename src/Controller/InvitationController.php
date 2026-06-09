@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\User;
 use App\Entity\WorkspaceMember;
 use App\Repository\WorkspaceInvitationRepository;
 use App\Repository\WorkspaceMemberRepository;
@@ -25,26 +26,34 @@ final class InvitationController extends AbstractController
         ]);
 
         if (!$invitation) {
-            throw $this->createNotFoundException('Invitation not found.');
+            $this->addFlash('danger', 'Invitation not found.');
+
+            return $this->redirectToRoute('app_dashboard');
         }
 
         if ($invitation->getExpiresAt() < new \DateTimeImmutable()) {
             $invitation->setStatus('expired');
             $entityManager->flush();
 
-            throw $this->createAccessDeniedException('Invitation has expired.');
-        }
+            $this->addFlash('danger', 'Invitation has expired.');
 
-        if (!$this->getUser()) {
-            return $this->redirectToRoute('app_login');
+            return $this->redirectToRoute('app_dashboard');
         }
 
         $user = $this->getUser();
 
+        if (!$user instanceof User) {
+            $this->addFlash('warning', 'Please create an account or login to accept the invitation.');
+
+            return $this->redirectToRoute('app_register', [
+                'invite' => $token,
+            ]);
+        }
+
         if ($user->getEmail() !== $invitation->getEmail()) {
-            throw $this->createAccessDeniedException(
-                'This invitation was sent to another email address.'
-            );
+            $this->addFlash('danger', 'This invitation was sent to another email address.');
+
+            return $this->redirectToRoute('app_dashboard');
         }
 
         $existingMember = $workspaceMemberRepository->findOneBy([
@@ -64,6 +73,8 @@ final class InvitationController extends AbstractController
         $invitation->setStatus('accepted');
 
         $entityManager->flush();
+
+        $this->addFlash('success', 'You have successfully joined the workspace.');
 
         return $this->redirectToRoute('app_workspace_show', [
             'id' => $invitation->getWorkspace()->getId(),

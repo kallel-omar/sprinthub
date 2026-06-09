@@ -5,23 +5,53 @@
 {% block body %}
 <div class="container mt-5">
 
-    <h1>Create Project</h1>
+    <div class="card shadow-sm">
+        <div class="card-body">
 
-    <p class="text-muted">
-        Workspace: {{ workspace.name }}
-    </p>
+            <h1 class="mb-3">Create Project</h1>
 
-    {{ form_start(form) }}
+            <p class="text-muted">
+                Workspace: {{ workspace.name }}
+            </p>
 
-        {{ form_row(form.name) }}
+            {{ form_start(form) }}
 
-        {{ form_row(form.description) }}
+                <div class="mb-3">
+                    {{ form_label(form.name) }}
 
-        <button class="btn btn-primary">
-            Create Project
-        </button>
+                    {{ form_widget(form.name, {
+                        attr: {
+                            class: 'form-control'
+                        }
+                    }) }}
 
-    {{ form_end(form) }}
+                    <div class="text-danger small mt-1">
+                        {{ form_errors(form.name) }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    {{ form_label(form.description) }}
+
+                    {{ form_widget(form.description, {
+                        attr: {
+                            class: 'form-control'
+                        }
+                    }) }}
+
+                    <div class="text-danger small mt-1">
+                        {{ form_errors(form.description) }}
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Create Project
+                </button>
+
+            {{ form_end(form) }}
+
+        </div>
+    </div>
 
 </div>
 {% endblock %}

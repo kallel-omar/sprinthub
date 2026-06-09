@@ -22,17 +22,9 @@
 
             {% if app.user %}
 
-                <a class="nav-link" href="{{ path('app_dashboard') }}">
-                    Dashboard
-                </a>
-
-                <a class="nav-link" href="{{ path('app_calendar') }}">
-                    Calendar
-                </a>
-
-                <a class="nav-link" href="{{ path('app_workspace_index') }}">
-                    Workspaces
-                </a>
+                <a class="nav-link" href="{{ path('app_dashboard') }}">Dashboard</a>
+                <a class="nav-link" href="{{ path('app_calendar') }}">Calendar</a>
+                <a class="nav-link" href="{{ path('app_workspace_index') }}">Workspaces</a>
 
                 <a class="nav-link d-flex align-items-center gap-2"
                    href="{{ path('app_profile') }}">
@@ -59,25 +51,34 @@
                     {% endif %}
                 </a>
 
-                <a class="nav-link" href="{{ path('app_logout') }}">
-                    Logout
-                </a>
+                <a class="nav-link" href="{{ path('app_logout') }}">Logout</a>
 
             {% else %}
 
-                <a class="nav-link" href="{{ path('app_login') }}">
-                    Login
-                </a>
-
-                <a class="nav-link" href="{{ path('app_register') }}">
-                    Register
-                </a>
+                <a class="nav-link" href="{{ path('app_login') }}">Login</a>
+                <a class="nav-link" href="{{ path('app_register') }}">Register</a>
 
             {% endif %}
 
         </div>
     </div>
 </nav>
+
+{% for label, messages in app.flashes %}
+    {% for message in messages %}
+        <div class="container mt-3">
+            <div class="alert alert-{{ label }} alert-dismissible fade show" role="alert">
+                {{ message }}
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="alert"
+                        aria-label="Close">
+                </button>
+            </div>
+        </div>
+    {% endfor %}
+{% endfor %}
 
 {% block body %}{% endblock %}
 

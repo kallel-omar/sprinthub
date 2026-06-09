@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\User;
 use App\Repository\TaskRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -12,8 +13,13 @@ final class CalendarController extends AbstractController
     #[Route('/calendar', name: 'app_calendar')]
     public function index(TaskRepository $taskRepository): Response
     {
-        /** @var \App\Entity\User $user */
         $user = $this->getUser();
+
+        if (!$user instanceof User) {
+            $this->addFlash('warning', 'Please login first.');
+
+            return $this->redirectToRoute('app_login');
+        }
 
         $tasks = $taskRepository->findBy([
             'assignee' => $user,

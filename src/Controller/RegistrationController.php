@@ -3,7 +3,9 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Entity\WorkspaceMember;
 use App\Form\RegistrationFormType;
+use App\Repository\WorkspaceInvitationRepository;
 use App\Security\LoginFormAuthenticator;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -16,26 +18,69 @@ use Symfony\Component\Routing\Attribute\Route;
 class RegistrationController extends AbstractController
 {
     #[Route('/register', name: 'app_register')]
-    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, Security $security, EntityManagerInterface $entityManager): Response
-    {
+    public function register(
+        Request $request,
+        UserPasswordHasherInterface $userPasswordHasher,
+        Security $security,
+        EntityManagerInterface $entityManager,
+        WorkspaceInvitationRepository $invitationRepository
+    ): Response {
         $user = new User();
         $user->setCreatedAt(new \DateTimeImmutable());
-        $form = $this->createForm(RegistrationFormType::class, $user);
+
+        $inviteToken = $request->query->get('invite');
+        $emailLocked = false;
+        $invitation = null;
+
+        if ($inviteToken) {
+            $invitation = $invitationRepository->findOneBy([
+                'token' => $inviteToken,
+                'status' => 'pending',
+            ]);
+
+            if ($invitation) {
+                $user->setEmail($invitation->getEmail());
+                $emailLocked = true;
+            }
+        }
+
+        $form = $this->createForm(RegistrationFormType::class, $user, [
+            'email_locked' => $emailLocked,
+        ]);
+
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var string $plainPassword */
             $plainPassword = $form->get('plainPassword')->getData();
 
-            // encode the plain password
-            $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
+            $user->setPassword(
+                $userPasswordHasher->hashPassword($user, $plainPassword)
+            );
 
             $entityManager->persist($user);
+
+            if ($invitation && $user->getEmail() === $invitation->getEmail()) {
+                $member = new WorkspaceMember();
+                $member->setWorkspace($invitation->getWorkspace());
+                $member->setUser($user);
+                $member->setRole('member');
+
+                $entityManager->persist($member);
+
+                $invitation->setStatus('accepted');
+
+                $this->addFlash('success', 'Account created and workspace joined successfully.');
+            } else {
+                $this->addFlash('success', 'Account created successfully. Welcome to SprintHub.');
+            }
+
             $entityManager->flush();
 
-            // do anything else you need here, like send an email
-
             return $security->login($user, LoginFormAuthenticator::class, 'main');
+        }
+
+        if ($form->isSubmitted() && !$form->isValid()) {
+            $this->addFlash('danger', 'Please check the registration form and try again.');
         }
 
         return $this->render('registration/register.html.twig', [

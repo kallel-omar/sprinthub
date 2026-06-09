@@ -4,6 +4,10 @@
 
 {% block body %}
 <div class="container mt-5">
+<a href="{{ path('app_workspace_index') }}"
+   class="btn btn-outline-secondary btn-sm mb-3">
+    ← Back to Workspaces
+</a>
 
     {% set currentRole = null %}
 
@@ -49,6 +53,8 @@
                 class="btn btn-outline-warning">
                     Invite Member
                 </a>
+
+                
             </div>
         {% endif %}
     </div>

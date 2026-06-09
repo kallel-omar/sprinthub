@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\User;
 use App\Repository\ActivityLogRepository;
 use App\Repository\NotificationRepository;
 use App\Repository\ProjectRepository;
@@ -21,8 +22,13 @@ final class DashboardController extends AbstractController
         ActivityLogRepository $activityLogRepository,
         NotificationRepository $notificationRepository
     ): Response {
-        /** @var \App\Entity\User $user */
         $user = $this->getUser();
+
+        if (!$user instanceof User) {
+            $this->addFlash('warning', 'Please login first.');
+
+            return $this->redirectToRoute('app_login');
+        }
 
         $today = new \DateTimeImmutable('today');
         $tomorrow = $today->modify('+1 day');
