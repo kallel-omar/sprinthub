@@ -21,6 +21,10 @@ ENV APP_DEBUG=0
 
 RUN composer install --no-dev --optimize-autoloader
 
+RUN mkdir -p public/uploads/avatars public/uploads/tasks \
+    && chown -R www-data:www-data public/uploads \
+    && chmod -R 775 public/uploads
+
 RUN a2enmod rewrite
 
 RUN printf '%s\n' \

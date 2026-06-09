@@ -21,7 +21,6 @@ final class ProfileController extends AbstractController
         EntityManagerInterface $entityManager,
         SluggerInterface $slugger
     ): Response {
-
         /** @var \App\Entity\User $user */
         $user = $this->getUser();
 
@@ -29,11 +28,9 @@ final class ProfileController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-
             $avatarFile = $form->get('avatarFile')->getData();
 
             if ($avatarFile) {
-
                 $originalFilename = pathinfo(
                     $avatarFile->getClientOriginalName(),
                     PATHINFO_FILENAME
@@ -55,6 +52,8 @@ final class ProfileController extends AbstractController
                     );
                 } catch (FileException $e) {
                     $this->addFlash('danger', 'Upload failed.');
+
+                    return $this->redirectToRoute('app_profile');
                 }
 
                 $user->setAvatar($newFilename);
