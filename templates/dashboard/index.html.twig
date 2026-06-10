@@ -8,76 +8,122 @@
     <h1 class="mb-4">🚀 SprintHub Dashboard</h1>
 
     <p class="text-muted">
-       Welcome back, <strong>{{ app.user ? app.user.fullName : 'Guest' }}</strong>
+        Welcome back, <strong>{{ app.user ? app.user.fullName : 'Guest' }}</strong>
     </p>
 
     <div class="row mt-4">
 
         <div class="col-md-3 mb-3">
-            <div class="card shadow-sm text-center">
-                <div class="card-body">
-                    <h6>Total Workspaces</h6>
-                    <h2>{{ totalWorkspaces }}</h2>
+            <a href="{{ path('app_workspace_index') }}" class="text-decoration-none text-dark">
+                <div class="card shadow-sm text-center h-100">
+                    <div class="card-body">
+                        <h6>My Workspaces</h6>
+                        <h2>{{ totalWorkspaces }}</h2>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <div class="col-md-3 mb-3">
-            <div class="card shadow-sm text-center">
-                <div class="card-body">
-                    <h6>Total Projects</h6>
-                    <h2>{{ totalProjects }}</h2>
+            <a href="{{ path('app_project_index') }}" class="text-decoration-none text-dark">
+                <div class="card shadow-sm text-center h-100">
+                    <div class="card-body">
+                        <h6>My Projects</h6>
+                        <h2>{{ totalProjects }}</h2>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <div class="col-md-3 mb-3">
-            <div class="card shadow-sm text-center">
-                <div class="card-body">
-                    <h6>My Tasks</h6>
-                    <h2>{{ myTotalTasks }}</h2>
+            <a href="{{ path('app_task_index') }}" class="text-decoration-none text-dark">
+                <div class="card shadow-sm text-center h-100">
+                    <div class="card-body">
+                        <h6>My Tasks</h6>
+                        <h2>{{ myTotalTasks }}</h2>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <div class="col-md-3 mb-3">
-            <div class="card shadow-sm text-center">
-                <div class="card-body">
-                    <h6>Unread Notifications</h6>
-                    <h2>{{ unreadNotifications }}</h2>
+            <a href="{{ path('app_notification_index') }}" class="text-decoration-none text-dark">
+                <div class="card shadow-sm text-center h-100">
+                    <div class="card-body">
+                        <h6>Unread Notifications</h6>
+                        <h2>{{ unreadNotifications }}</h2>
+                    </div>
                 </div>
-            </div>
+            </a>
+
         </div>
 
     </div>
+   <div class="row mt-3">
+
+    <div class="col-md-6 mb-3">
+        <a href="{{ path('app_workspace_pending_projects') }}"
+   class="text-decoration-none text-dark">
+
+            <div class="card border-warning text-center h-100">
+                <div class="card-body">
+                    <h5>⏳ Pending Projects</h5>
+                    <h2>{{ pendingProjects }}</h2>
+                </div>
+            </div>
+
+        </a>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <a href="{{ path('app_project_join_requests') }}"
+   class="text-decoration-none text-dark">
+
+            <div class="card border-info text-center h-100">
+                <div class="card-body">
+                    <h5>🙋 Join Requests</h5>
+                    <h2>{{ pendingJoinRequests }}</h2>
+                </div>
+            </div>
+
+        </a>
+    </div>
+
+</div>
 
     <div class="row mt-3">
 
         <div class="col-md-4 mb-3">
-            <div class="card border-secondary text-center">
-                <div class="card-body">
-                    <h5>My Todo</h5>
-                    <h2>{{ myTodoTasks }}</h2>
+            <a href="{{ path('app_task_index', {'status': 'todo'}) }}" class="text-decoration-none text-dark">
+                <div class="card border-secondary text-center h-100">
+                    <div class="card-body">
+                        <h5>My Todo</h5>
+                        <h2>{{ myTodoTasks }}</h2>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <div class="col-md-4 mb-3">
-            <div class="card border-warning text-center">
-                <div class="card-body">
-                    <h5>My In Progress</h5>
-                    <h2>{{ myInProgressTasks }}</h2>
+            <a href="{{ path('app_task_index', {'status': 'in_progress'}) }}" class="text-decoration-none text-dark">
+                <div class="card border-warning text-center h-100">
+                    <div class="card-body">
+                        <h5>My In Progress</h5>
+                        <h2>{{ myInProgressTasks }}</h2>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <div class="col-md-4 mb-3">
-            <div class="card border-success text-center">
-                <div class="card-body">
-                    <h5>My Completed</h5>
-                    <h2>{{ myDoneTasks }}</h2>
+            <a href="{{ path('app_task_index', {'status': 'done'}) }}" class="text-decoration-none text-dark">
+                <div class="card border-success text-center h-100">
+                    <div class="card-body">
+                        <h5>My Completed</h5>
+                        <h2>{{ myDoneTasks }}</h2>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
 
     </div>
@@ -99,35 +145,41 @@
     <div class="row mt-4">
 
         <div class="col-md-4 mb-3">
-            <div class="card border-danger text-center">
-                <div class="card-body">
-                    <h5>⚠️ Overdue</h5>
-                    <h2>{{ overdueTasks|length }}</h2>
+            <a href="{{ path('app_task_index', {'deadline': 'overdue'}) }}" class="text-decoration-none text-dark">
+                <div class="card border-danger text-center h-100">
+                    <div class="card-body">
+                        <h5>⚠️ Overdue</h5>
+                        <h2>{{ overdueTasks|length }}</h2>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <div class="col-md-4 mb-3">
-            <div class="card border-warning text-center">
-                <div class="card-body">
-                    <h5>📅 Due Today</h5>
-                    <h2>{{ dueTodayTasks|length }}</h2>
+            <a href="{{ path('app_task_index', {'deadline': 'today'}) }}" class="text-decoration-none text-dark">
+                <div class="card border-warning text-center h-100">
+                    <div class="card-body">
+                        <h5>📅 Due Today</h5>
+                        <h2>{{ dueTodayTasks|length }}</h2>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <div class="col-md-4 mb-3">
-            <div class="card border-info text-center">
-                <div class="card-body">
-                    <h5>📆 Due This Week</h5>
-                    <h2>{{ dueThisWeekTasks|length }}</h2>
+            <a href="{{ path('app_task_index', {'deadline': 'week'}) }}" class="text-decoration-none text-dark">
+                <div class="card border-info text-center h-100">
+                    <div class="card-body">
+                        <h5>📆 Due This Week</h5>
+                        <h2>{{ dueThisWeekTasks|length }}</h2>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
 
     </div>
 
-    <div class="card shadow-sm mt-4">
+    <div class="card shadow-sm mt-4" id="deadline-tasks">
         <div class="card-body">
             <h5>⏰ Deadline Tasks</h5>
 
@@ -184,7 +236,7 @@
     <div class="row mt-4">
 
         <div class="col-md-6 mb-3">
-            <div class="card shadow-sm h-100">
+            <div class="card shadow-sm h-100" id="my-tasks">
                 <div class="card-body">
                     <h5>✅ My Recent Tasks</h5>
 
@@ -222,58 +274,53 @@
                 <div class="card-body">
                     <h5 class="mb-3">📜 Recent Activity Timeline</h5>
 
-{% for activity in recentActivities %}
-    <div class="d-flex gap-3 border-bottom py-3">
+                    {% for activity in recentActivities %}
+                        <div class="d-flex gap-3 border-bottom py-3">
 
-        <div>
-            {% if activity.type == 'task_created' %}
-                🟢
-            {% elseif activity.type == 'task_updated' %}
-                📝
-            {% elseif activity.type == 'task_completed' %}
-                ✅
-            {% elseif activity.type == 'task_started' %}
-                🚧
-            {% elseif activity.type == 'task_deleted' %}
-                🗑️
-           {% elseif activity.type == 'comment_added' or activity.type == 'comment' %}
-                💬
+                            <div>
+                                {% if activity.type == 'task_created' %}
+                                    🟢
+                                {% elseif activity.type == 'task_updated' %}
+                                    📝
+                                {% elseif activity.type == 'task_completed' %}
+                                    ✅
+                                {% elseif activity.type == 'task_started' %}
+                                    🚧
+                                {% elseif activity.type == 'task_deleted' %}
+                                    🗑️
+                                {% elseif activity.type == 'comment_added' or activity.type == 'comment' %}
+                                    💬
+                                {% elseif activity.type == 'attachment_uploaded' or activity.type == 'file_uploaded' %}
+                                    📎
+                                {% elseif activity.type == 'file_deleted' %}
+                                    ❌
+                                {% elseif activity.type == 'checklist_added' %}
+                                    ☑️
+                                {% elseif activity.type == 'workspace_invitation' %}
+                                    📧
+                                {% elseif activity.type == 'task_status_changed' %}
+                                    🔄
+                                {% else %}
+                                    📌
+                                {% endif %}
+                            </div>
 
-            {% elseif activity.type == 'attachment_uploaded' or activity.type == 'file_uploaded' %}
-                📎
+                            <div class="flex-grow-1">
+                                <div>
+                                    {{ activity.message }}
+                                </div>
 
-            {% elseif activity.type == 'file_deleted' %}
-                ❌
+                                <small class="text-muted">
+                                    {{ activity.createdAt|date('d/m/Y H:i') }}
+                                </small>
+                            </div>
 
-            {% elseif activity.type == 'checklist_added' %}
-                ☑️
-
-            {% elseif activity.type == 'workspace_invitation' %}
-                📧
-
-            {% elseif activity.type == 'task_status_changed' %}
-                🔄
-            {% else %}
-                📌
-            {% endif %}
-        </div>
-
-        <div class="flex-grow-1">
-            <div>
-                {{ activity.message }}
-            </div>
-
-            <small class="text-muted">
-                {{ activity.createdAt|date('d/m/Y H:i') }}
-            </small>
-        </div>
-
-    </div>
-{% else %}
-    <p class="text-muted mt-3">
-        No activity yet.
-    </p>
-{% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mt-3">
+                            No activity yet.
+                        </p>
+                    {% endfor %}
 
                 </div>
             </div>

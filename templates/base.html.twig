@@ -11,58 +11,7 @@
 
 <body class="bg-light">
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-
-        <a class="navbar-brand fw-bold" href="{{ path('app_dashboard') }}">
-            SprintHub
-        </a>
-
-        <div class="navbar-nav ms-auto">
-
-            {% if app.user %}
-
-                <a class="nav-link" href="{{ path('app_dashboard') }}">Dashboard</a>
-                <a class="nav-link" href="{{ path('app_calendar') }}">Calendar</a>
-                <a class="nav-link" href="{{ path('app_workspace_index') }}">Workspaces</a>
-
-                <a class="nav-link d-flex align-items-center gap-2"
-                   href="{{ path('app_profile') }}">
-
-                    {% if app.user.avatar %}
-                        <img src="{{ asset('uploads/avatars/' ~ app.user.avatar) }}"
-                             class="rounded-circle"
-                             style="width:32px;height:32px;object-fit:cover;">
-                    {% endif %}
-
-                    Profile
-                </a>
-
-                <a class="nav-link position-relative"
-                   href="{{ path('app_notification_index') }}">
-                    🔔
-
-                    {% set unreadNotifications = render(path('app_notification_count')) %}
-
-                    {% if unreadNotifications|trim > 0 %}
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            {{ unreadNotifications|trim }}
-                        </span>
-                    {% endif %}
-                </a>
-
-                <a class="nav-link" href="{{ path('app_logout') }}">Logout</a>
-
-            {% else %}
-
-                <a class="nav-link" href="{{ path('app_login') }}">Login</a>
-                <a class="nav-link" href="{{ path('app_register') }}">Register</a>
-
-            {% endif %}
-
-        </div>
-    </div>
-</nav>
+{% include 'partials/_navbar.html.twig' %}
 
 {% for label, messages in app.flashes %}
     {% for message in messages %}
@@ -82,8 +31,66 @@
 
 {% block body %}{% endblock %}
 
+{% include 'partials/_footer.html.twig' %}
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
 
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const notificationDropdown = document.getElementById('notificationDropdown');
+
+    if (notificationDropdown) {
+        notificationDropdown.addEventListener('shown.bs.dropdown', function () {
+            fetch('{{ path('app_notification_mark_dropdown_read') }}', {
+                method: 'POST'
+            }).then(() => {
+                const badge = notificationDropdown.querySelector('.badge');
+
+                if (badge) {
+                    badge.remove();
+                }
+            });
+        });
+    }
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    function updateNotificationCount() {
+        fetch('{{ path('app_notification_live_count') }}')
+            .then(response => response.json())
+            .then(data => {
+                const dropdown = document.getElementById('notificationDropdown');
+                let badge = document.getElementById('notificationBadge');
+
+                if (!dropdown) {
+                    return;
+                }
+
+                if (data.count > 0) {
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.id = 'notificationBadge';
+                        badge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger';
+                        dropdown.appendChild(badge);
+                    }
+
+                    badge.textContent = data.count;
+                } else {
+                    if (badge) {
+                        badge.remove();
+                    }
+                }
+            });
+    }
+
+    updateNotificationCount();
+
+    setInterval(updateNotificationCount, 5000);
+});
+</script>
+
 {% block javascripts %}{% endblock %}
+
 </body>
 </html>

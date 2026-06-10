@@ -86,6 +86,12 @@ private Collection $notifications;
 #[ORM\ManyToMany(targetEntity: Project::class, mappedBy: 'members')]
 private Collection $memberProjects;
 
+/**
+ * @var Collection<int, ProjectJoinRequest>
+ */
+#[ORM\OneToMany(targetEntity: ProjectJoinRequest::class, mappedBy: 'user', orphanRemoval: true)]
+private Collection $projectJoinRequests;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -96,6 +102,7 @@ private Collection $memberProjects;
          $this->workspaces = new ArrayCollection();
          $this->notifications = new ArrayCollection();
          $this->memberProjects = new ArrayCollection();
+         $this->projectJoinRequests = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -400,6 +407,36 @@ public function removeMemberProject(Project $memberProject): static
 {
     if ($this->memberProjects->removeElement($memberProject)) {
         $memberProject->removeMember($this);
+    }
+
+    return $this;
+}
+
+/**
+ * @return Collection<int, ProjectJoinRequest>
+ */
+public function getProjectJoinRequests(): Collection
+{
+    return $this->projectJoinRequests;
+}
+
+public function addProjectJoinRequest(ProjectJoinRequest $projectJoinRequest): static
+{
+    if (!$this->projectJoinRequests->contains($projectJoinRequest)) {
+        $this->projectJoinRequests->add($projectJoinRequest);
+        $projectJoinRequest->setUser($this);
+    }
+
+    return $this;
+}
+
+public function removeProjectJoinRequest(ProjectJoinRequest $projectJoinRequest): static
+{
+    if ($this->projectJoinRequests->removeElement($projectJoinRequest)) {
+        // set the owning side to null (unless already changed)
+        if ($projectJoinRequest->getUser() === $this) {
+            $projectJoinRequest->setUser(null);
+        }
     }
 
     return $this;

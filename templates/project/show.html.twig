@@ -86,60 +86,159 @@
                     <h5>Project Members</h5>
 
                     <div class="mb-3">
-    {% if project.members is not empty %}
-        {% for member in project.members %}
+                        {% if project.members is not empty %}
+                            {% for member in project.members %}
 
-            {% set memberRole = 'member' %}
+                                {% set memberRole = 'member' %}
 
-            {% for workspaceMember in project.workspace.members %}
-                {% if workspaceMember.user.id == member.id %}
-                    {% set memberRole = workspaceMember.role %}
-                {% endif %}
-            {% endfor %}
+                                {% for workspaceMember in project.workspace.members %}
+                                    {% if workspaceMember.user.id == member.id %}
+                                        {% set memberRole = workspaceMember.role %}
+                                    {% endif %}
+                                {% endfor %}
 
-            <span class="badge
-                {% if memberRole == 'owner' %}
-                    bg-danger
-                {% elseif memberRole == 'admin' %}
-                    bg-warning text-dark
-                {% else %}
-                    bg-primary
-                {% endif %}
-                me-1">
+                                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                                    <div>
+                                        <span class="badge
+                                            {% if memberRole == 'owner' %}
+                                                bg-danger
+                                            {% elseif memberRole == 'admin' %}
+                                                bg-warning text-dark
+                                            {% else %}
+                                                bg-primary
+                                            {% endif %}
+                                            me-1">
 
-                👤 {{ member.fullName }}
+                                            👤 {{ member.fullName }}
 
-                {% if memberRole == 'owner' %}
-                    (Owner)
-                {% elseif memberRole == 'admin' %}
-                    (Admin)
-                {% else %}
-                    (Member)
-                {% endif %}
-            </span>
+                                            {% if memberRole == 'owner' %}
+                                                (Owner)
+                                            {% elseif memberRole == 'admin' %}
+                                                (Admin)
+                                            {% else %}
+                                                (Member)
+                                            {% endif %}
+                                        </span>
 
-        {% endfor %}
-    {% else %}
-        <p class="text-muted mb-0">No members yet.</p>
-    {% endif %}
-</div>
+                                        <small class="text-muted ms-2">
+                                            {{ member.email }}
+                                        </small>
+                                    </div>
+
+                                     {% if canManageProjectMembers
+                                        and project.members|length > 1
+                                        and app.user.id != member.id
+                                        and memberRole != 'owner'
+                                        and not (memberRole == 'admin' and currentWorkspaceRole == 'admin')
+                                     %}
+                                       <button type="button"
+                                                class="btn btn-sm btn-outline-danger"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#removeProjectMemberModal{{ member.id }}">
+                                            Remove
+                                        </button>
+
+                                        <div class="modal fade" id="removeProjectMemberModal{{ member.id }}" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Remove Project Member</h5>
+                                                        <button type="button"
+                                                                class="btn-close"
+                                                                data-bs-dismiss="modal"></button>
+                                                    </div>
+
+                                                    <div class="modal-body">
+                                                        Are you sure you want to remove
+                                                        <strong>{{ member.fullName }}</strong>
+                                                        from project
+                                                        <strong>{{ project.name }}</strong>?
+                                                    </div>
+
+                                                    <div class="modal-footer">
+                                                        <button type="button"
+                                                                class="btn btn-secondary btn-sm"
+                                                                data-bs-dismiss="modal">
+                                                            Cancel
+                                                        </button>
+
+                                                        <a href="{{ path('app_project_member_remove', {
+                                                            project: project.id,
+                                                            user: member.id
+                                                        }) }}"
+                                                        class="btn btn-danger btn-sm">
+                                                            Yes, remove
+                                                        </a>
+                                                    </div>
+
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted mb-0">No members yet.</p>
+                        {% endif %}
+                    </div>
 
                     {% if canManageProjectMembers %}
-    <hr>
+                        <hr>
 
-    {{ form_start(memberForm) }}
-        {{ form_widget(memberForm) }}
+                        {{ form_start(memberForm) }}
+                            {{ form_widget(memberForm) }}
 
-        <button class="btn btn-primary">
-            Add Member
-        </button>
-    {{ form_end(memberForm) }}
-{% endif %}
+                            <button class="btn btn-primary">
+                                Add Member
+                            </button>
+                        {{ form_end(memberForm) }}
+                    {% endif %}
                 </div>
             </div>
+            {% if canManageProjectMembers and pendingJoinRequests is not empty %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5>Project Access Requests</h5>
+
+            {% for joinRequest in pendingJoinRequests %}
+                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                    <div>
+                        <strong>{{ joinRequest.user.fullName }}</strong>
+
+                        <small class="text-muted d-block">
+                            {{ joinRequest.user.email }}
+                        </small>
+
+                        <small class="text-muted">
+                            Requested on {{ joinRequest.createdAt|date('d/m/Y H:i') }}
+                        </small>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <a href="{{ path('app_project_join_request_approve', {'id': joinRequest.id}) }}"
+                           class="btn btn-sm btn-success">
+                            Approve
+                        </a>
+
+                        <a href="{{ path('app_project_join_request_reject', {'id': joinRequest.id}) }}"
+                           class="btn btn-sm btn-outline-danger">
+                            Reject
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
 
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4>Kanban Board</h4>
+                <a href="{{ path('app_project_activity', {'id': project.id}) }}"
+   class="btn btn-outline-info">
+    Activity Log
+</a>
 
                 <div class="d-flex gap-2">
                     <a href="{{ path('app_project_stats', {'id': project.id}) }}"
@@ -214,17 +313,25 @@
 
                                 {% for task in tasks %}
                                     {% if task.status == statusKey %}
+                                    {% set canManageTask =
+                                        canManageAllTasks
+                                        or (task.assignee and task.assignee.id == currentUser.id)
+                                    %}
                                         <div class="card mb-2 kanban-task"
-                                             draggable="true"
-                                             data-task-id="{{ task.id }}">
+                                        draggable="{{ canManageTask ? 'true' : 'false' }}"
+                                        data-task-id="{{ task.id }}">
                                             <div class="card-body">
 
                                                 <h6>
+                                                {% if canManageTask %}
                                                     <a href="{{ path('app_task_show', {'id': task.id}) }}"
-                                                       class="text-decoration-none">
+                                                    class="text-decoration-none">
                                                         {{ task.title }}
                                                     </a>
-                                                </h6>
+                                                {% else %}
+                                                    {{ task.title }}
+                                                {% endif %}
+                                            </h6>
 
                                                 <p class="text-muted small">
                                                     {{ task.description|default('No description') }}
@@ -286,19 +393,25 @@
                                                     </div>
                                                 {% endif %}
 
-                                                <br>
+                                                {% if canManageTask %}
 
-                                                <a href="{{ path('app_task_edit', {'id': task.id}) }}"
-                                                   class="btn btn-outline-primary btn-sm mt-2">
-                                                    Edit
-                                                </a>
+                                                    <br>
 
-                                                <button type="button"
-                                                        class="btn btn-outline-danger btn-sm mt-2"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#deleteTaskModal{{ task.id }}">
-                                                    Delete
-                                                </button>
+                                                    <a href="{{ path('app_task_edit', {'id': task.id}) }}"
+                                                    class="btn btn-outline-primary btn-sm mt-2">
+                                                        Edit
+                                                    </a>
+
+                                                    {% if canManageAllTasks %}
+                                                        <button type="button"
+                                                                class="btn btn-outline-danger btn-sm mt-2"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#deleteTaskModal{{ task.id }}">
+                                                            Delete
+                                                        </button>
+                                                    {% endif %}
+
+                                                {% endif %}
 
                                                 <div class="modal fade" id="deleteTaskModal{{ task.id }}" tabindex="-1">
                                                     <div class="modal-dialog">

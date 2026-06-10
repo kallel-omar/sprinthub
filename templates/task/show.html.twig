@@ -11,18 +11,58 @@
     </a>
 
     <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <h1>{{ task.title }}</h1>
+    <div class="card-body">
+        <h1>{{ task.title }}</h1>
 
-            <p class="text-muted">
-                Status: {{ task.status }}
-            </p>
+        <div class="row mt-3">
 
-            <p>
-                {{ task.description|default('No description') }}
-            </p>
+            <div class="col-md-8">
+                <p>
+                    {{ task.description|default('No description') }}
+                </p>
+            </div>
+
+            <div class="col-md-4">
+                <div class="border rounded p-3 bg-light">
+
+                    <h6 class="mb-3">Task Details</h6>
+
+                    <p class="mb-2">
+                        <strong>Status:</strong>
+                        {{ task.status }}
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>Priority:</strong>
+                        {{ task.priority }}
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>Created by:</strong>
+                        {{ task.createdBy ? task.createdBy.fullName : 'Unknown' }}
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>Assigned to:</strong>
+                        {{ task.assignee ? task.assignee.fullName : 'Unassigned' }}
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>Created on:</strong>
+                        {{ task.createdAt|date('d/m/Y H:i') }}
+                    </p>
+
+                    <p class="mb-0">
+                        <strong>Due date:</strong>
+                        {{ task.dueDate ? task.dueDate|date('d/m/Y') : 'No due date' }}
+                    </p>
+
+                </div>
+            </div>
+
         </div>
     </div>
+</div>
 
     <h4>Checklist</h4>
 

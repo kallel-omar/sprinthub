@@ -55,12 +55,22 @@ class Project
     #[ORM\JoinTable(name: 'project_members')]
     private Collection $members;
 
+    #[ORM\Column(length: 255)]
+    private ?string $approvalStatus = 'pending';
+
+    /**
+     * @var Collection<int, ProjectJoinRequest>
+     */
+    #[ORM\OneToMany(targetEntity: ProjectJoinRequest::class, mappedBy: 'project', orphanRemoval: true)]
+    private Collection $projectJoinRequests;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
         $this->tasks = new ArrayCollection();
         $this->activityLogs = new ArrayCollection();
         $this->members = new ArrayCollection();
+        $this->projectJoinRequests = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -222,6 +232,48 @@ class Project
         public function removeMember(User $member): static
         {
             $this->members->removeElement($member);
+
+            return $this;
+        }
+
+        public function getApprovalStatus(): ?string
+        {
+            return $this->approvalStatus;
+        }
+
+        public function setApprovalStatus(string $approvalStatus): static
+        {
+            $this->approvalStatus = $approvalStatus;
+
+            return $this;
+        }
+
+        /**
+         * @return Collection<int, ProjectJoinRequest>
+         */
+        public function getProjectJoinRequests(): Collection
+        {
+            return $this->projectJoinRequests;
+        }
+
+        public function addProjectJoinRequest(ProjectJoinRequest $projectJoinRequest): static
+        {
+            if (!$this->projectJoinRequests->contains($projectJoinRequest)) {
+                $this->projectJoinRequests->add($projectJoinRequest);
+                $projectJoinRequest->setProject($this);
+            }
+
+            return $this;
+        }
+
+        public function removeProjectJoinRequest(ProjectJoinRequest $projectJoinRequest): static
+        {
+            if ($this->projectJoinRequests->removeElement($projectJoinRequest)) {
+                // set the owning side to null (unless already changed)
+                if ($projectJoinRequest->getProject() === $this) {
+                    $projectJoinRequest->setProject(null);
+                }
+            }
 
             return $this;
         }

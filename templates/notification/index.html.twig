@@ -5,7 +5,32 @@
 {% block body %}
 <div class="container mt-5">
 
-    <h1 class="mb-4">🔔 Notifications</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0">🔔 Notifications</h1>
+
+        {% if notifications is not empty %}
+            <div class="d-flex gap-2">
+
+                <form method="post"
+                      action="{{ path('app_notification_mark_all_read') }}">
+                    <button type="submit"
+                            class="btn btn-outline-success btn-sm">
+                        Mark all as read
+                    </button>
+                </form>
+
+                <form method="post"
+                      action="{{ path('app_notification_delete_normal') }}"
+                      onsubmit="return confirm('Delete all normal notifications? Pending invitations will be kept.');">
+                    <button type="submit"
+                            class="btn btn-outline-danger btn-sm">
+                        Delete all notifications
+                    </button>
+                </form>
+
+            </div>
+        {% endif %}
+    </div>
 
     {% if notifications is empty %}
         <div class="alert alert-info">
@@ -19,15 +44,25 @@
                     <div class="d-flex justify-content-between align-items-center border-bottom py-3">
 
                         <div>
-                            {% if notification.isRead %}
-                                <span class="text-muted">
-                                    {{ notification.message }}
-                                </span>
-                            {% else %}
-                                <strong>
-                                    {{ notification.message }}
-                                </strong>
 
+                            {% if notification.link %}
+                                <a href="{{ path('app_notification_open', {'id': notification.id}) }}"
+                                   class="text-decoration-none {% if notification.isRead %}text-muted{% else %}text-dark fw-bold{% endif %}">
+                                    {{ notification.message }}
+                                </a>
+                            {% else %}
+                                {% if notification.isRead %}
+                                    <span class="text-muted">
+                                        {{ notification.message }}
+                                    </span>
+                                {% else %}
+                                    <strong>
+                                        {{ notification.message }}
+                                    </strong>
+                                {% endif %}
+                            {% endif %}
+
+                            {% if not notification.isRead %}
                                 <span class="badge bg-primary ms-2">
                                     New
                                 </span>
@@ -36,13 +71,14 @@
                             <small class="text-muted d-block">
                                 {{ notification.createdAt|date('d/m/Y H:i') }}
                             </small>
+
                         </div>
 
-                        {% if not notification.isRead %}
+                        <div class="d-flex gap-2">
 
-                            {# Invitation notification #}
-                            {% if notification.link and 'invite/accept' in notification.link %}
-                                <div class="d-flex gap-2">
+                            {% if not notification.isRead %}
+
+                                {% if notification.link and 'invite/accept' in notification.link %}
 
                                     <a href="{{ notification.link }}"
                                        class="btn btn-sm btn-success">
@@ -54,24 +90,38 @@
                                         Decline
                                     </a>
 
-                                </div>
+                                {% elseif notification.link %}
 
-                            {# Task notification or any notification with link #}
-                            {% elseif notification.link %}
-                                <a href="{{ path('app_notification_open', {'id': notification.id}) }}"
-       class="btn btn-sm btn-outline-primary">
-        Open
-                                </a>
+                                    <a href="{{ path('app_notification_open', {'id': notification.id}) }}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        Open
+                                    </a>
 
-                            {# Regular notification #}
-                            {% else %}
-                                <a href="{{ path('app_notification_read', {'id': notification.id}) }}"
-                                   class="btn btn-sm btn-outline-success">
-                                    Mark as read
-                                </a>
+                                {% else %}
+
+                                    <a href="{{ path('app_notification_read', {'id': notification.id}) }}"
+                                       class="btn btn-sm btn-outline-success">
+                                        Mark as read
+                                    </a>
+
+                                {% endif %}
+
                             {% endif %}
 
-                        {% endif %}
+                            {% if not (not notification.isRead and notification.link and 'invite/accept' in notification.link) %}
+                                <form method="post"
+                                      action="{{ path('app_notification_delete', {'id': notification.id}) }}"
+                                      onsubmit="return confirm('Delete this notification?');">
+
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-danger">
+                                        Delete
+                                    </button>
+
+                                </form>
+                            {% endif %}
+
+                        </div>
 
                     </div>
                 {% endfor %}

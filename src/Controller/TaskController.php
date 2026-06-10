@@ -26,9 +26,78 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 #[Route('/tasks')]
 final class TaskController extends AbstractController
 {
+    #[Route('', name: 'app_task_index')]
+    public function index(Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User) {
+            return $this->redirectToRoute('app_login');
+        }
+
+        $status = $request->query->get('status');
+        $deadline = $request->query->get('deadline');
+
+        $tasks = $entityManager
+            ->getRepository(Task::class)
+            ->findBy(['assignee' => $user], ['createdAt' => 'DESC']);
+
+        $today = new \DateTimeImmutable('today');
+        $tomorrow = $today->modify('+1 day');
+        $endOfWeek = $today->modify('+7 days');
+
+        $tasks = array_filter($tasks, function (Task $task) use ($status, $deadline, $today, $tomorrow, $endOfWeek) {
+            if ($status && $task->getStatus() !== $status) {
+                return false;
+            }
+
+            if ($deadline === 'overdue') {
+                return $task->getDueDate()
+                    && $task->getDueDate() < $today
+                    && $task->getStatus() !== 'done';
+            }
+
+            if ($deadline === 'today') {
+                return $task->getDueDate()
+                    && $task->getDueDate() >= $today
+                    && $task->getDueDate() < $tomorrow
+                    && $task->getStatus() !== 'done';
+            }
+
+            if ($deadline === 'week') {
+                return $task->getDueDate()
+                    && $task->getDueDate() >= $tomorrow
+                    && $task->getDueDate() <= $endOfWeek
+                    && $task->getStatus() !== 'done';
+            }
+
+            return true;
+        });
+
+        return $this->render('task/index.html.twig', [
+            'tasks' => $tasks,
+            'status' => $status,
+            'deadline' => $deadline,
+        ]);
+    }
+
     #[Route('/new/{id}', name: 'app_task_new')]
     public function new(Project $project, Request $request, EntityManagerInterface $entityManager): Response
     {
+        if (!$this->isProjectMember($project)) {
+            $this->addFlash('danger', 'You cannot create tasks in this project.');
+
+            return $this->redirectToRoute('app_project_index');
+        }
+
+        if (!$this->isWorkspaceManager($project)) {
+            $this->addFlash('danger', 'Only workspace owner or admin can create tasks.');
+
+            return $this->redirectToRoute('app_project_show', [
+                'id' => $project->getId(),
+            ]);
+        }
+
         $task = new Task();
 
         $form = $this->createForm(TaskType::class, $task, [
@@ -38,7 +107,9 @@ final class TaskController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+
             $task->setProject($project);
+            $task->setCreatedBy($this->getUser());
 
             $entityManager->persist($task);
 
@@ -49,11 +120,13 @@ final class TaskController extends AbstractController
                 $task
             );
 
+            $entityManager->flush();
+
             if ($task->getAssignee()) {
                 $notification = new Notification();
                 $notification->setUser($task->getAssignee());
                 $notification->setMessage(
-                    $this->getUserDisplayName() . ' assigned you to task "' . $task->getTitle() . '"'
+                    $this->getUserDisplayName() . ' assigned you to task "' . $task->getTitle() . '".'
                 );
                 $notification->setLink(
                     $this->generateUrl('app_task_show', [
@@ -62,9 +135,8 @@ final class TaskController extends AbstractController
                 );
 
                 $entityManager->persist($notification);
+                $entityManager->flush();
             }
-
-            $entityManager->flush();
 
             $this->addFlash('success', 'Task created successfully.');
 
@@ -82,6 +154,15 @@ final class TaskController extends AbstractController
     #[Route('/{id}/start', name: 'app_task_start')]
     public function start(Task $task, EntityManagerInterface $entityManager): Response
     {
+        $project = $task->getProject();
+
+        if (!$project || !$this->canManageTask($task)) {
+            $this->addFlash('danger', 'You can only move tasks assigned to you.');
+
+            return $this->redirectToRoute('app_project_index');
+        }
+
+        $oldStatus = $task->getStatus();
         $task->setStatus('in_progress');
 
         $this->createActivityLog(
@@ -91,18 +172,35 @@ final class TaskController extends AbstractController
             $task
         );
 
+        $this->notifyWorkspaceManagers(
+            $entityManager,
+            $task,
+            $this->getUserDisplayName() . ' moved task "' . $task->getTitle() . '" from ' .
+            ucfirst(str_replace('_', ' ', $oldStatus)) . ' to In progress.',
+            $this->generateUrl('app_task_show', ['id' => $task->getId()])
+        );
+
         $entityManager->flush();
 
         $this->addFlash('success', 'Task moved to In Progress.');
 
         return $this->redirectToRoute('app_project_show', [
-            'id' => $task->getProject()->getId(),
+            'id' => $project->getId(),
         ]);
     }
 
     #[Route('/{id}/done', name: 'app_task_done')]
     public function done(Task $task, EntityManagerInterface $entityManager): Response
     {
+        $project = $task->getProject();
+
+        if (!$project || !$this->canManageTask($task)) {
+            $this->addFlash('danger', 'You can only move tasks assigned to you.');
+
+            return $this->redirectToRoute('app_project_index');
+        }
+
+        $oldStatus = $task->getStatus();
         $task->setStatus('done');
 
         $this->createActivityLog(
@@ -112,12 +210,23 @@ final class TaskController extends AbstractController
             $task
         );
 
+        $this->notifyWorkspaceManagers(
+            $entityManager,
+            $task,
+            $this->getUserDisplayName() . ' moved task "' . $task->getTitle() . '" from ' .
+            ucfirst(str_replace('_', ' ', $oldStatus)) . ' to Done.',
+            $this->generateUrl('app_task_show', ['id' => $task->getId()])
+        );
+
+        $this->notifyTaskAssigneeCompleted($entityManager, $task);
+        $this->notifyTaskCreatorCompleted($entityManager, $task);
+
         $entityManager->flush();
 
         $this->addFlash('success', 'Task marked as done.');
 
         return $this->redirectToRoute('app_project_show', [
-            'id' => $task->getProject()->getId(),
+            'id' => $project->getId(),
         ]);
     }
 
@@ -128,7 +237,16 @@ final class TaskController extends AbstractController
 
         if (!$project) {
             $this->addFlash('danger', 'This task is not linked to any project.');
+
             return $this->redirectToRoute('app_project_index');
+        }
+
+        if (!$this->canManageTask($task)) {
+            $this->addFlash('danger', 'You can only edit tasks assigned to you.');
+
+            return $this->redirectToRoute('app_project_show', [
+                'id' => $project->getId(),
+            ]);
         }
 
         $oldAssignee = $task->getAssignee();
@@ -184,7 +302,30 @@ final class TaskController extends AbstractController
     #[Route('/{id}/delete', name: 'app_task_delete')]
     public function delete(Task $task, EntityManagerInterface $entityManager): Response
     {
-        $projectId = $task->getProject()->getId();
+        $project = $task->getProject();
+
+        if (!$project) {
+            $this->addFlash('danger', 'This task is not linked to any project.');
+
+            return $this->redirectToRoute('app_project_index');
+        }
+
+        if (!$this->isWorkspaceManager($project)) {
+            $this->addFlash('danger', 'Only workspace owner or admin can delete tasks.');
+
+            return $this->redirectToRoute('app_project_show', [
+                'id' => $project->getId(),
+            ]);
+        }
+
+        $projectId = $project->getId();
+        $taskTitle = $task->getTitle();
+
+        $this->notifyWorkspaceManagers(
+            $entityManager,
+            $task,
+            $this->getUserDisplayName() . ' deleted task "' . $taskTitle . '".'
+        );
 
         foreach ($task->getActivityLogs() as $activityLog) {
             $entityManager->remove($activityLog);
@@ -211,9 +352,37 @@ final class TaskController extends AbstractController
         EntityManagerInterface $entityManager,
         SluggerInterface $slugger
     ): Response {
+        $project = $task->getProject();
+
+        if (!$project || !$this->canAccessTask($task)) {
+            $this->addFlash('danger', 'You cannot access this task.');
+
+            return $this->redirectToRoute('app_project_index');
+        }
+
         $comment = new TaskComment();
         $commentForm = $this->createForm(TaskCommentType::class, $comment);
+
+        $attachment = new TaskAttachment();
+        $attachmentForm = $this->createForm(TaskAttachmentType::class, $attachment);
+
+        $checklistItem = new TaskChecklistItem();
+        $checklistForm = $this->createForm(TaskChecklistItemType::class, $checklistItem);
+
         $commentForm->handleRequest($request);
+        $attachmentForm->handleRequest($request);
+        $checklistForm->handleRequest($request);
+
+        if (
+            ($commentForm->isSubmitted() || $attachmentForm->isSubmitted() || $checklistForm->isSubmitted())
+            && !$this->canManageTask($task)
+        ) {
+            $this->addFlash('danger', 'You can only update tasks assigned to you.');
+
+            return $this->redirectToRoute('app_task_show', [
+                'id' => $task->getId(),
+            ]);
+        }
 
         if ($commentForm->isSubmitted() && $commentForm->isValid()) {
             $comment->setTask($task);
@@ -228,30 +397,11 @@ final class TaskController extends AbstractController
                 $task
             );
 
-            $currentUser = $this->getUser();
-
-                foreach ($task->getProject()->getMembers() as $projectMember) {
-                    if (!$projectMember instanceof User) {
-                        continue;
-                    }
-
-                    if ($currentUser instanceof User && $projectMember->getId() === $currentUser->getId()) {
-                        continue;
-                    }
-
-                    $notification = new Notification();
-                    $notification->setUser($projectMember);
-                    $notification->setMessage(
-                        $this->getUserDisplayName() . ' commented on task "' . $task->getTitle() . '".'
-                    );
-                    $notification->setLink(
-                        $this->generateUrl('app_task_show', [
-                            'id' => $task->getId(),
-                        ])
-                    );
-
-                    $entityManager->persist($notification);
-                }
+            $this->notifyProjectMembers(
+                $entityManager,
+                $task,
+                $this->getUserDisplayName() . ' commented on task "' . $task->getTitle() . '".'
+            );
 
             $entityManager->flush();
 
@@ -261,14 +411,6 @@ final class TaskController extends AbstractController
                 'id' => $task->getId(),
             ]);
         }
-
-        $attachment = new TaskAttachment();
-        $attachmentForm = $this->createForm(TaskAttachmentType::class, $attachment);
-        $attachmentForm->handleRequest($request);
-
-        $checklistItem = new TaskChecklistItem();
-        $checklistForm = $this->createForm(TaskChecklistItemType::class, $checklistItem);
-        $checklistForm->handleRequest($request);
 
         if ($checklistForm->isSubmitted() && $checklistForm->isValid()) {
             $checklistItem->setTask($task);
@@ -280,6 +422,12 @@ final class TaskController extends AbstractController
                 'checklist_added',
                 $this->getUserDisplayName() . ' added checklist item "' . $checklistItem->getContent() . '" to task "' . $task->getTitle() . '"',
                 $task
+            );
+
+            $this->notifyProjectMembers(
+                $entityManager,
+                $task,
+                $this->getUserDisplayName() . ' added a checklist item to task "' . $task->getTitle() . '".'
             );
 
             $entityManager->flush();
@@ -331,6 +479,12 @@ final class TaskController extends AbstractController
                     $task
                 );
 
+                $this->notifyProjectMembers(
+                    $entityManager,
+                    $task,
+                    $this->getUserDisplayName() . ' uploaded a file to task "' . $task->getTitle() . '".'
+                );
+
                 $entityManager->flush();
 
                 $this->addFlash('success', 'File uploaded successfully.');
@@ -350,15 +504,24 @@ final class TaskController extends AbstractController
     }
 
     #[Route('/attachment/{id}/delete', name: 'app_attachment_delete')]
-    public function deleteAttachment(
-        TaskAttachment $attachment,
-        EntityManagerInterface $entityManager
-    ): Response {
-        if ($attachment->getUploadedBy() !== $this->getUser()) {
-            throw $this->createAccessDeniedException('You cannot delete this attachment.');
+    public function deleteAttachment(TaskAttachment $attachment, EntityManagerInterface $entityManager): Response
+    {
+        $task = $attachment->getTask();
+
+        if (!$task || !$this->canManageTask($task)) {
+            $this->addFlash('danger', 'You cannot delete this attachment.');
+
+            return $this->redirectToRoute('app_project_index');
         }
 
-        $task = $attachment->getTask();
+        if ($attachment->getUploadedBy() !== $this->getUser() && !$this->isWorkspaceManager($task->getProject())) {
+            $this->addFlash('danger', 'You can only delete your own attachments.');
+
+            return $this->redirectToRoute('app_task_show', [
+                'id' => $task->getId(),
+            ]);
+        }
+
         $taskId = $task->getId();
         $originalName = $attachment->getOriginalName();
 
@@ -375,6 +538,12 @@ final class TaskController extends AbstractController
             $task
         );
 
+        $this->notifyProjectMembers(
+            $entityManager,
+            $task,
+            $this->getUserDisplayName() . ' deleted a file from task "' . $task->getTitle() . '".'
+        );
+
         $entityManager->remove($attachment);
         $entityManager->flush();
 
@@ -386,11 +555,15 @@ final class TaskController extends AbstractController
     }
 
     #[Route('/{id}/status', name: 'app_task_update_status', methods: ['POST'])]
-    public function updateStatus(
-        Task $task,
-        Request $request,
-        EntityManagerInterface $entityManager
-    ): JsonResponse {
+    public function updateStatus(Task $task, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        if (!$this->canManageTask($task)) {
+            return new JsonResponse([
+                'success' => false,
+                'error' => 'You can only move tasks assigned to you.',
+            ], 403);
+        }
+
         $data = json_decode($request->getContent(), true);
 
         if (!isset($data['status'])) {
@@ -401,14 +574,43 @@ final class TaskController extends AbstractController
             return new JsonResponse(['success' => false, 'error' => 'Invalid status'], 400);
         }
 
-        $task->setStatus($data['status']);
+        $oldStatus = $task->getStatus();
+        $newStatus = $data['status'];
+
+        if ($oldStatus === $newStatus) {
+            return new JsonResponse([
+                'success' => true,
+                'status' => $task->getStatus(),
+            ]);
+        }
+
+        $task->setStatus($newStatus);
 
         $this->createActivityLog(
             $entityManager,
             'task_status_changed',
-            $this->getUserDisplayName() . ' moved task "' . $task->getTitle() . '" to ' . $data['status'],
+            $this->getUserDisplayName() . ' moved task "' . $task->getTitle() . '" to ' . $newStatus,
             $task
         );
+
+        $this->notifyWorkspaceManagers(
+            $entityManager,
+            $task,
+            $this->getUserDisplayName() .
+            ' moved task "' .
+            $task->getTitle() .
+            '" from ' .
+            ucfirst(str_replace('_', ' ', $oldStatus)) .
+            ' to ' .
+            ucfirst(str_replace('_', ' ', $newStatus)) .
+            '.',
+            $this->generateUrl('app_task_show', ['id' => $task->getId()])
+        );
+
+        if ($newStatus === 'done') {
+            $this->notifyTaskAssigneeCompleted($entityManager, $task);
+            $this->notifyTaskCreatorCompleted($entityManager, $task);
+        }
 
         $entityManager->flush();
 
@@ -419,17 +621,31 @@ final class TaskController extends AbstractController
     }
 
     #[Route('/checklist/{id}/toggle', name: 'app_checklist_toggle')]
-    public function toggleChecklist(
-        TaskChecklistItem $item,
-        EntityManagerInterface $entityManager
-    ): Response {
+    public function toggleChecklist(TaskChecklistItem $item, EntityManagerInterface $entityManager): Response
+    {
+        $task = $item->getTask();
+
+        if (!$this->canManageTask($task)) {
+            $this->addFlash('danger', 'You can only update checklist items on tasks assigned to you.');
+
+            return $this->redirectToRoute('app_task_show', [
+                'id' => $task->getId(),
+            ]);
+        }
+
         $item->setIsDone(!$item->isDone());
 
         $this->createActivityLog(
             $entityManager,
             'checklist_toggled',
             $this->getUserDisplayName() . ' updated checklist item "' . $item->getContent() . '"',
-            $item->getTask()
+            $task
+        );
+
+        $this->notifyProjectMembers(
+            $entityManager,
+            $task,
+            $this->getUserDisplayName() . ' updated a checklist item on task "' . $task->getTitle() . '".'
         );
 
         $entityManager->flush();
@@ -437,16 +653,23 @@ final class TaskController extends AbstractController
         $this->addFlash('success', 'Checklist item updated.');
 
         return $this->redirectToRoute('app_task_show', [
-            'id' => $item->getTask()->getId(),
+            'id' => $task->getId(),
         ]);
     }
 
     #[Route('/checklist/{id}/delete', name: 'app_checklist_delete')]
-    public function deleteChecklist(
-        TaskChecklistItem $item,
-        EntityManagerInterface $entityManager
-    ): Response {
+    public function deleteChecklist(TaskChecklistItem $item, EntityManagerInterface $entityManager): Response
+    {
         $task = $item->getTask();
+
+        if (!$this->canManageTask($task)) {
+            $this->addFlash('danger', 'You can only delete checklist items on tasks assigned to you.');
+
+            return $this->redirectToRoute('app_task_show', [
+                'id' => $task->getId(),
+            ]);
+        }
+
         $taskId = $task->getId();
         $content = $item->getContent();
 
@@ -455,6 +678,12 @@ final class TaskController extends AbstractController
             'checklist_deleted',
             $this->getUserDisplayName() . ' deleted checklist item "' . $content . '"',
             $task
+        );
+
+        $this->notifyProjectMembers(
+            $entityManager,
+            $task,
+            $this->getUserDisplayName() . ' deleted a checklist item from task "' . $task->getTitle() . '".'
         );
 
         $entityManager->remove($item);
@@ -468,15 +697,20 @@ final class TaskController extends AbstractController
     }
 
     #[Route('/comment/{id}/delete', name: 'app_comment_delete')]
-    public function deleteComment(
-        TaskComment $comment,
-        EntityManagerInterface $entityManager
-    ): Response {
+    public function deleteComment(TaskComment $comment, EntityManagerInterface $entityManager): Response
+    {
         if ($comment->getUser() !== $this->getUser()) {
             throw $this->createAccessDeniedException('You cannot delete this comment.');
         }
 
         $task = $comment->getTask();
+
+        if (!$task || !$this->isProjectMember($task->getProject())) {
+            $this->addFlash('danger', 'You cannot access this task.');
+
+            return $this->redirectToRoute('app_project_index');
+        }
+
         $taskId = $task->getId();
 
         $this->createActivityLog(
@@ -484,6 +718,12 @@ final class TaskController extends AbstractController
             'comment_deleted',
             $this->getUserDisplayName() . ' deleted a comment from task "' . $task->getTitle() . '"',
             $task
+        );
+
+        $this->notifyProjectMembers(
+            $entityManager,
+            $task,
+            $this->getUserDisplayName() . ' deleted a comment from task "' . $task->getTitle() . '".'
         );
 
         $entityManager->remove($comment);
@@ -514,6 +754,124 @@ final class TaskController extends AbstractController
         $entityManager->persist($log);
     }
 
+    private function notifyWorkspaceManagers(
+        EntityManagerInterface $entityManager,
+        Task $task,
+        string $message,
+        ?string $link = null
+    ): void {
+        $currentUser = $this->getUser();
+
+        foreach ($task->getProject()->getWorkspace()->getMembers() as $workspaceMember) {
+            if (!in_array($workspaceMember->getRole(), ['owner', 'admin'], true)) {
+                continue;
+            }
+
+            $user = $workspaceMember->getUser();
+
+            if (!$user instanceof User) {
+                continue;
+            }
+
+            if ($currentUser instanceof User && $user->getId() === $currentUser->getId()) {
+                continue;
+            }
+
+            $notification = new Notification();
+            $notification->setUser($user);
+            $notification->setMessage($message);
+            $notification->setLink($link);
+
+            $entityManager->persist($notification);
+        }
+    }
+
+    private function notifyProjectMembers(
+        EntityManagerInterface $entityManager,
+        Task $task,
+        string $message
+    ): void {
+        $currentUser = $this->getUser();
+
+        foreach ($task->getProject()->getMembers() as $projectMember) {
+            if (!$projectMember instanceof User) {
+                continue;
+            }
+
+            if ($currentUser instanceof User && $projectMember->getId() === $currentUser->getId()) {
+                continue;
+            }
+
+            $notification = new Notification();
+            $notification->setUser($projectMember);
+            $notification->setMessage($message);
+            $notification->setLink(
+                $this->generateUrl('app_task_show', [
+                    'id' => $task->getId(),
+                ])
+            );
+
+            $entityManager->persist($notification);
+        }
+    }
+
+    private function notifyTaskAssigneeCompleted(EntityManagerInterface $entityManager, Task $task): void
+    {
+        $assignee = $task->getAssignee();
+        $currentUser = $this->getUser();
+
+        if (!$assignee instanceof User) {
+            return;
+        }
+
+        if ($currentUser instanceof User && $assignee->getId() === $currentUser->getId()) {
+            return;
+        }
+
+        $notification = new Notification();
+        $notification->setUser($assignee);
+        $notification->setMessage(
+            $this->getUserDisplayName() . ' completed your assigned task "' . $task->getTitle() . '".'
+        );
+        $notification->setLink(
+            $this->generateUrl('app_task_show', [
+                'id' => $task->getId(),
+            ])
+        );
+
+        $entityManager->persist($notification);
+    } 
+    private function notifyTaskCreatorCompleted(EntityManagerInterface $entityManager, Task $task): void
+{
+    $creator = $task->getCreatedBy();
+    $currentUser = $this->getUser();
+
+    if (!$creator instanceof User) {
+        return;
+    }
+
+    if ($currentUser instanceof User && $creator->getId() === $currentUser->getId()) {
+        return;
+    }
+
+    if ($task->getAssignee() instanceof User && $creator->getId() === $task->getAssignee()->getId()) {
+        return;
+    }
+
+    $notification = new Notification();
+    $notification->setUser($creator);
+    $notification->setMessage(
+        $this->getUserDisplayName() . ' completed the task you created "' . $task->getTitle() . '".'
+    );
+    $notification->setLink(
+        $this->generateUrl('app_task_show', [
+            'id' => $task->getId(),
+        ])
+    );
+
+    $entityManager->persist($notification);
+}
+
     private function getUserDisplayName(): string
     {
         $user = $this->getUser();
@@ -524,4 +882,57 @@ final class TaskController extends AbstractController
 
         return ucfirst($user->getFullName() ?? 'Someone');
     }
+
+    private function isProjectMember(Project $project): bool
+    {
+        $user = $this->getUser();
+
+        return $user instanceof User && $project->getMembers()->contains($user);
+    }
+
+    private function isWorkspaceManager(Project $project): bool
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User) {
+            return false;
+        }
+
+        foreach ($project->getWorkspace()->getMembers() as $workspaceMember) {
+            if (
+                $workspaceMember->getUser()->getId() === $user->getId()
+                && in_array($workspaceMember->getRole(), ['owner', 'admin'], true)
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function canManageTask(Task $task): bool
+{
+    return $this->canAccessTask($task);
+}
+    private function canAccessTask(Task $task): bool
+{
+    $user = $this->getUser();
+
+    if (!$user instanceof User) {
+        return false;
+    }
+
+    $project = $task->getProject();
+
+    if (!$project || !$this->isProjectMember($project)) {
+        return false;
+    }
+
+    if ($this->isWorkspaceManager($project)) {
+        return true;
+    }
+
+    return $task->getAssignee() instanceof User
+        && $task->getAssignee()->getId() === $user->getId();
+}
 }

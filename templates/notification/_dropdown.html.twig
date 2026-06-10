@@ -1,0 +1,36 @@
+{% if notifications is empty %}
+    <li>
+        <span class="dropdown-item text-muted">
+            No notifications
+        </span>
+    </li>
+{% else %}
+    {% for notification in notifications %}
+        <li>
+            {% if notification.link %}
+                <a class="dropdown-item small {% if not notification.isRead %}fw-bold{% endif %}"
+                   href="{{ path('app_notification_open', {'id': notification.id}) }}">
+                    {{ notification.message|length > 45
+                        ? notification.message|slice(0, 45) ~ '...'
+                        : notification.message }}
+                </a>
+            {% else %}
+                <a class="dropdown-item small {% if not notification.isRead %}fw-bold{% endif %}"
+                   href="{{ path('app_notification_read', {'id': notification.id}) }}">
+                    {{ notification.message|length > 45
+                        ? notification.message|slice(0, 45) ~ '...'
+                        : notification.message }}
+                </a>
+            {% endif %}
+        </li>
+    {% endfor %}
+
+    <li><hr class="dropdown-divider"></li>
+
+    <li>
+        <a class="dropdown-item text-center small"
+           href="{{ path('app_notification_index') }}">
+            View all notifications
+        </a>
+    </li>
+{% endif %}

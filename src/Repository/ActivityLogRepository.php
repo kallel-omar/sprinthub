@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\ActivityLog;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use App\Entity\Project;
 
 /**
  * @extends ServiceEntityRepository<ActivityLog>
@@ -40,4 +41,20 @@ class ActivityLogRepository extends ServiceEntityRepository
 //            ->getOneOrNullResult()
 //        ;
 //    }
+public function findByProjectAndType(
+    Project $project,
+    ?string $type = null
+): array {
+    $qb = $this->createQueryBuilder('a')
+        ->andWhere('a.project = :project')
+        ->setParameter('project', $project)
+        ->orderBy('a.createdAt', 'DESC');
+
+    if ($type) {
+        $qb->andWhere('a.type LIKE :type')
+           ->setParameter('type', '%' . $type . '%');
+    }
+
+    return $qb->getQuery()->getResult();
+}
 }

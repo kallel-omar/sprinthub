@@ -5,9 +5,9 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Repository\ActivityLogRepository;
 use App\Repository\NotificationRepository;
-use App\Repository\ProjectRepository;
 use App\Repository\TaskRepository;
-use App\Repository\WorkspaceRepository;
+use App\Repository\ProjectRepository;
+use App\Repository\ProjectJoinRequestRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -16,12 +16,12 @@ final class DashboardController extends AbstractController
 {
     #[Route('/dashboard', name: 'app_dashboard')]
     public function index(
-        WorkspaceRepository $workspaceRepository,
-        ProjectRepository $projectRepository,
-        TaskRepository $taskRepository,
-        ActivityLogRepository $activityLogRepository,
-        NotificationRepository $notificationRepository
-    ): Response {
+    TaskRepository $taskRepository,
+    ActivityLogRepository $activityLogRepository,
+    NotificationRepository $notificationRepository,
+    ProjectRepository $projectRepository,
+    ProjectJoinRequestRepository $projectJoinRequestRepository
+): Response {
         $user = $this->getUser();
 
         if (!$user instanceof User) {
@@ -33,6 +33,23 @@ final class DashboardController extends AbstractController
         $today = new \DateTimeImmutable('today');
         $tomorrow = $today->modify('+1 day');
         $endOfWeek = $today->modify('+7 days');
+
+        $userWorkspaces = [];
+        $userProjects = [];
+
+        foreach ($user->getWorkspaceMemberships() as $membership) {
+            $workspace = $membership->getWorkspace();
+            $userWorkspaces[] = $workspace;
+
+            foreach ($workspace->getProjects() as $project) {
+                if ($project->getMembers()->contains($user)) {
+                    $userProjects[] = $project;
+                }
+            }
+        }
+
+        $totalWorkspaces = count($userWorkspaces);
+        $totalProjects = count($userProjects);
 
         $allMyTasks = $taskRepository->findBy([
             'assignee' => $user,
@@ -88,16 +105,82 @@ final class DashboardController extends AbstractController
             'isRead' => false,
         ]);
 
-        $recentActivities = $activityLogRepository->findBy(
-            [],
-            ['createdAt' => 'DESC'],
-            8
+        $ownerWorkspaces = [];
+        $memberProjects = [];
+
+        foreach ($user->getWorkspaceMemberships() as $membership) {
+            if ($membership->getRole() === 'owner') {
+                $ownerWorkspaces[] = $membership->getWorkspace();
+
+                continue;
+            }
+
+            foreach ($membership->getWorkspace()->getProjects() as $project) {
+                if ($project->getMembers()->contains($user)) {
+                    $memberProjects[] = $project;
+                }
+            }
+        }
+
+        $recentActivities = [];
+
+        $queryBuilder = $activityLogRepository
+            ->createQueryBuilder('activity')
+            ->orderBy('activity.createdAt', 'DESC')
+            ->setMaxResults(8);
+
+        if (!empty($ownerWorkspaces) && !empty($memberProjects)) {
+            $queryBuilder
+                ->where('activity.workspace IN (:ownerWorkspaces)')
+                ->orWhere('activity.project IN (:memberProjects)')
+                ->setParameter('ownerWorkspaces', $ownerWorkspaces)
+                ->setParameter('memberProjects', $memberProjects);
+
+            $recentActivities = $queryBuilder
+                ->getQuery()
+                ->getResult();
+        } elseif (!empty($ownerWorkspaces)) {
+            $queryBuilder
+                ->where('activity.workspace IN (:ownerWorkspaces)')
+                ->setParameter('ownerWorkspaces', $ownerWorkspaces);
+
+            $recentActivities = $queryBuilder
+                ->getQuery()
+                ->getResult();
+        } elseif (!empty($memberProjects)) {
+            $queryBuilder
+                ->where('activity.project IN (:memberProjects)')
+                ->setParameter('memberProjects', $memberProjects);
+
+            $recentActivities = $queryBuilder
+                ->getQuery()
+                ->getResult();
+        }
+        $pendingProjects = 0;
+$pendingJoinRequests = 0;
+
+foreach ($user->getWorkspaceMemberships() as $membership) {
+
+    if ($membership->getRole() !== 'owner') {
+        continue;
+    }
+
+    foreach ($membership->getWorkspace()->getProjects() as $project) {
+
+        if ($project->getApprovalStatus() === 'pending') {
+            $pendingProjects++;
+        }
+
+        $pendingJoinRequests += count(
+            $projectJoinRequestRepository->findPendingByProject($project)
         );
+    }
+}
 
         return $this->render('dashboard/index.html.twig', [
-            'totalWorkspaces' => $workspaceRepository->count([]),
-            'totalProjects' => $projectRepository->count([]),
-            'totalTasks' => $taskRepository->count([]),
+            'totalWorkspaces' => $totalWorkspaces,
+            'totalProjects' => $totalProjects,
+            'totalTasks' => $myTotalTasks,
 
             'myTasks' => $myTasks,
             'myTotalTasks' => $myTotalTasks,
@@ -112,6 +195,9 @@ final class DashboardController extends AbstractController
 
             'unreadNotifications' => $unreadNotifications,
             'recentActivities' => $recentActivities,
+
+            'pendingProjects' => $pendingProjects,
+            'pendingJoinRequests' => $pendingJoinRequests,
         ]);
     }
 }

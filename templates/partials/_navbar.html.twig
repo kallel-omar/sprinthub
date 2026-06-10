@@ -1,0 +1,94 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+
+        <a class="navbar-brand fw-bold"
+           href="{{ path('app_dashboard') }}">
+            SprintHub
+        </a>
+
+        <div class="navbar-nav ms-auto">
+
+            {% if app.user %}
+
+                <a class="nav-link"
+                   href="{{ path('app_dashboard') }}">
+                    Dashboard
+                </a>
+
+                <a class="nav-link"
+                   href="{{ path('app_calendar') }}">
+                    Calendar
+                </a>
+
+                <a class="nav-link"
+                   href="{{ path('app_workspace_index') }}">
+                    Workspaces
+                </a>
+
+                <a class="nav-link d-flex align-items-center gap-2"
+                   href="{{ path('app_profile') }}">
+
+                    {% if app.user.avatar %}
+                        <img src="{{ asset('uploads/avatars/' ~ app.user.avatar) }}"
+                             class="rounded-circle"
+                             style="width:32px;height:32px;object-fit:cover;">
+                    {% endif %}
+
+                    Profile
+                </a>
+
+                <div class="nav-item dropdown">
+
+                    <a class="nav-link dropdown-toggle position-relative"
+                       href="#"
+                       id="notificationDropdown"
+                       role="button"
+                       data-bs-toggle="dropdown"
+                       aria-expanded="false">
+
+                        🔔
+
+                        {% set unreadNotifications = render(path('app_notification_count')) %}
+
+                        {% if unreadNotifications|trim > 0 %}
+                            <span id="notificationBadge"
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                {{ unreadNotifications|trim }}
+                            </span>
+                        {% endif %}
+
+                    </a>
+
+                    <ul class="dropdown-menu dropdown-menu-end"
+                        aria-labelledby="notificationDropdown"
+                        style="min-width:320px;">
+
+                        {{ render(path('app_notification_latest')) }}
+
+                    </ul>
+
+                </div>
+
+                <a class="nav-link"
+                   href="{{ path('app_logout') }}">
+                    Logout
+                </a>
+
+            {% else %}
+
+                <a class="nav-link"
+                   href="{{ path('app_login') }}">
+                    Login
+                </a>
+
+                <a class="nav-link"
+                   href="{{ path('app_register') }}">
+                    Register
+                </a>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+</nav>
