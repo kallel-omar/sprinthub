@@ -16,6 +16,19 @@ class TaskRepository extends ServiceEntityRepository
         parent::__construct($registry, Task::class);
     }
 
+
+    public function findLatestByWorkspace($workspace, int $limit = 5): array
+{
+    return $this->createQueryBuilder('t')
+        ->join('t.project', 'p')
+        ->andWhere('p.workspace = :workspace')
+        ->setParameter('workspace', $workspace)
+        ->orderBy('t.createdAt', 'DESC')
+        ->setMaxResults($limit)
+        ->getQuery()
+        ->getResult();
+}
+
 //    /**
 //     * @return Task[] Returns an array of Task objects
 //     */
@@ -40,4 +53,5 @@ class TaskRepository extends ServiceEntityRepository
 //            ->getOneOrNullResult()
 //        ;
 //    }
+
 }

@@ -10,6 +10,9 @@ use App\Entity\WorkspaceMember;
 use App\Form\WorkspaceInvitationType;
 use App\Form\WorkspaceType;
 use App\Repository\WorkspaceMemberRepository;
+use App\Repository\ProjectRepository;
+use App\Repository\TaskRepository;
+use App\Repository\ActivityLogRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -563,20 +566,126 @@ public function pendingProjects(): Response
 }
 
     #[Route('/{id}', name: 'app_workspace_show')]
-    public function show(Workspace $workspace): Response
-    {
-        $role = $this->getUserWorkspaceRole($workspace);
+public function show(
+    Workspace $workspace,
+    ProjectRepository $projectRepository,
+    TaskRepository $taskRepository,
+    ActivityLogRepository $activityLogRepository
+): Response {
+    $role = $this->getUserWorkspaceRole($workspace);
 
-        if (!$role) {
-            $this->addFlash('danger', 'You are not a member of this workspace.');
+    if (!$role) {
+        $this->addFlash('danger', 'You are not a member of this workspace.');
 
-            return $this->redirectToRoute('app_workspace_index');
-        }
-
-        return $this->render('workspace/show.html.twig', [
-            'workspace' => $workspace,
-        ]);
+        return $this->redirectToRoute('app_workspace_index');
     }
+
+    $projects = $projectRepository->findBy([
+        'workspace' => $workspace,
+    ]);
+
+    $totalProjects = count($projects);
+
+    $totalTasks = 0;
+    $completedTasks = 0;
+    $todoTasks = 0;
+    $inProgressTasks = 0;
+    $doneTasks = 0;
+    $lowPriorityTasks = 0;
+    $mediumPriorityTasks = 0;
+    $highPriorityTasks = 0;
+    $upcomingTasks = [];
+
+
+    foreach ($projects as $project) {
+        $tasks = $taskRepository->findBy([
+            'project' => $project,
+        ]);
+
+        $totalTasks += count($tasks);
+
+       foreach ($tasks as $task) {
+    if ($task->getStatus() === 'todo') {
+        $todoTasks++;
+    }
+
+    if ($task->getStatus() === 'in_progress') {
+        $inProgressTasks++;
+    }
+
+    if ($task->getStatus() === 'done') {
+        $doneTasks++;
+        $completedTasks++;
+    }
+    if ($task->getPriority() === 'Low') {
+    $lowPriorityTasks++;
+}
+
+if ($task->getPriority() === 'Medium') {
+    $mediumPriorityTasks++;
+}
+
+if ($task->getPriority() === 'High') {
+    $highPriorityTasks++;
+}
+foreach ($tasks as $task) {
+    if (
+        $task->getDueDate() !== null &&
+        $task->getStatus() !== 'done'
+    ) {
+        $upcomingTasks[] = $task;
+    }
+}
+}
+    }
+
+    $completedPercentage = $totalTasks > 0
+        ? round(($completedTasks / $totalTasks) * 100)
+        : 0;
+
+    $membersCount = count($workspace->getMembers());
+
+    $recentActivity = $activityLogRepository->findBy(
+        ['workspace' => $workspace],
+        ['createdAt' => 'DESC'],
+        10
+    );
+
+    $latestProjects = $projectRepository->findBy(
+        ['workspace' => $workspace],
+        ['id' => 'DESC'],
+        5
+    );
+
+    $latestTasks = $taskRepository->findLatestByWorkspace(
+    $workspace,
+    5
+    );
+    usort($upcomingTasks, function ($a, $b) {
+    return $a->getDueDate() <=> $b->getDueDate();
+});
+
+$upcomingTasks = array_slice($upcomingTasks, 0, 5);
+
+    return $this->render('workspace/show.html.twig', [
+        'workspace' => $workspace,
+        'totalProjects' => $totalProjects,
+        'totalTasks' => $totalTasks,
+        'completedTasks' => $completedTasks,
+        'completedPercentage' => $completedPercentage,
+        'membersCount' => $membersCount,
+        'recentActivity' => $recentActivity,
+        'latestProjects' => $latestProjects,
+        'latestTasks' => $latestTasks,
+        'todoTasks' => $todoTasks,
+        'inProgressTasks' => $inProgressTasks,
+        'doneTasks' => $doneTasks,
+        'lowPriorityTasks' => $lowPriorityTasks,
+        'mediumPriorityTasks' => $mediumPriorityTasks,
+        'highPriorityTasks' => $highPriorityTasks,
+        'upcomingTasks' => $upcomingTasks,
+    ]);
+}
 
     private function notifyWorkspaceManagers(
         EntityManagerInterface $entityManager,
